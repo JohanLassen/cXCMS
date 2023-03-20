@@ -1,0 +1,125 @@
+---
+title: "Tutorial"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# ```{r, include = FALSE}
+# knitr::opts_chunk$set(
+#   collapse = TRUE,
+#   comment = "#>"
+# )
+# ```
+# 
+# ```{r setup}
+# library(cXCMS)
+# library(xcms)
+# ```
+# 
+# ## Generate sample info dataframe
+# ```{r}
+# files <- list.files("/home/johan/Documents/lcms_exampledata", full.names = T)
+# sample_info <- data.frame("filename"=files, "group"=grepl("QC", files))
+# head(sample_info)
+# ```
+# 
+# # Perform peak picking
+# ```{r}
+# cwp <- 
+#   CentWaveParam(
+#     peakwidth=c(4,30), 
+#     snthresh=6, 
+#     ppm=12, 
+#     prefilter=c(3,200), 
+#     mzdiff=0.01
+#     ) 
+# 
+# for (sample in 1:nrow(sample_info)){
+#   print(paste("sample", sample, "of", nrow(sample_info)))
+#   cFindChromPeaks(sample_info = sample_info[1:5,], cwp = cwp, index = sample)
+# }
+# 
+# xset_peaksIdentified <- collect_files()
+# ```
+# 
+# # Perform grouping
+# 
+# This is just the regular xcms grouping
+# ```{r}
+# pdp <- PeakDensityParam(sampleGroups=xset_peaksIdentified@phenoData@data$group,
+#                         bw           = 10, 
+#                         minFraction  = 0.5)
+# 
+# xset_grouped_first <- groupChromPeaks(xset_peaksIdentified, param=pdp)
+# 
+# # Save
+# save(xset_grouped_first, file = "./tmp/xset_grouped_first.Rdata")
+# ```
+# 
+# 
+# # Perform retention time correction
+# ```{r}
+# param <- PeakGroupsParam(smooth = "loess",
+#                          minFraction	= 0.5,
+#                          span = 0.25,
+#                          extraPeaks = 250, # for full dataset 200 does not work
+#                          family = "gaussian")
+# 
+# xset_aligned <- adjustRtime(xset_grouped_first, param)
+# xset_aligned <- applyAdjustedRtime(xset_aligned)
+# save(xset_aligned, file = "./tmp/xset_aligned.Rdata")
+# ```
+# 
+# 
+# # Regroup
+# ```{r}
+# pdp <- PeakDensityParam(sampleGroups=xset_peaksIdentified@phenoData@data$group,
+#                         bw           = 10, 
+#                         minFraction  = 0.5)
+# 
+# xset_grouped_second <- groupChromPeaks(xset_peaksIdentified, param=pdp)
+# 
+# # Save
+# save(xset_grouped_second, file = "./tmp/xset_grouped_second.Rdata")
+# ```
+# 
+# # Integrate (fill missing peaks)
+# 
+# ### Prepare the objects
+# ```{r}
+# params        <- FillChromPeaksParam()
+# prepared_data <- cPrepFillChromPeaks(xset_grouped_second, param = params)
+# save(prepared_data, file="./tmp/prepared_data.Rdata")
+# ```
+# 
+# ### Extracting peaks from the spectras
+# This is the memory intensive step. Beware that it will always rerun all files as the peaks depend on previous steps
+# ```{r}
+# # load("./tmp/prepared_data.Rdata")
+# for (i in 1:nrow(sample_info)){
+#   cGetChromPeakData(prepared_data, index = i)
+# }
+# 
+# ```
+# 
+# ```{r}
+# ms_integrated <- cfillChromPeaks(prepared_data = "./tmp/prepared_data.Rdata")
+# ```
+# 
+# ```{r}
+# # Extract tabular data from XCMSnExp object
+# rtmz_intervals <- featureDefinitions(ms_integrated)
+# feat_intensity <- featureValues(ms_integrated)
+# # featureValues(xset_integrated, method = "medret", value = "into") %>% as_tibble() %>% head()
+# tabular_data   <- cbind(rtmz_intervals, feat_intensity) |> as.data.frame()
+# tabular_data$peakidx <- NULL
+# if(!dir.exists("./results")) { dir.create("./results") }
+# write.csv(tabular_data, "./results/xcms_preprocessed.csv")
+# 
+# # clean all intermediate files
+# unlink("tmp", recursive = TRUE)
+# ```
+
