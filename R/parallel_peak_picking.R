@@ -1,90 +1,98 @@
 
 
 
+
+#' Create output dir
+#'
+#' This function is a utility function that creates the output directory if it does not already exist
+#'
+#' @param output the output path
+#'
+#' @return None
+.checkdir <- function(output){
+  dir_path <- dirname(output)
+  if (!file.exists(dir_path)){
+    dir.create(dir_path, recursive=TRUE)
+  }
+  return()
+}
+
+
 #' Single file peak identification for parallel processing and/or RAM optimization
 #'
-#' @param sample_info data.frame (or tibble) containing the columns: "filename" and "group"
+#' @param input filename of the mzML input files
+#' @param output output filename
 #' @param cwp native xcms CentWaveParam() function output
-#' @param index which file should be run in xcms
-#' @param save_folder the folder for saving the peak picked files. It is recommended only to change this if running custom workflows.
-#' @import xcms
+#' @param groups the group variable used in new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)). The group variable might bias the analysis and in big datasets it might beneficial setting groups = None to do random group assignment
+#' @importFrom xcms findChromPeaks
+#' @importFrom MSnbase readMSData
 #' @return peak picked files in the save_folder location (./tmp/peaks_identified)
 #' @export
-cFindChromPeaks <- function(sample_info, cwp, index = 1, save_folder = NULL){
+cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
 
-  if (!is.data.frame(sample_info)){
-    stop("'sample_info' should be a dataframe containing absolute mzml file locations and group names!")}
-  if (!("filename" %in% colnames(sample_info))){
-    stop("'sample_info' should contain the column 'filename' containing absolute mzml file locations!\nExample: /home/user/Documents/lcms_project/data/fileA.mzML")}
-  if (!("group" %in% colnames(sample_info))){
-    warning("'sample_info' should contain the column 'group' containing the groups of the experiment. None found, using random group assignment")}
+  if (typeof(input)!="character"){stop("Input must be a string\n")}
+  if (!grepl("mzML|mzXML", input)){stop("Input must be a mzML or mzXML file\n")}
+  if (!grepl("[.]Rdata|[.]rdata", output)){stop("Output file must be a rdata file type (.Rdata or .rdata). Just edit the name of the output files\n")}
+  if (is.null(groups)){
+    warning("No groups provided (Experimental groups). Using random group assignment\n")
+    groups = sample(paste0("group", 1:2), 1)}
 
-  # generate sample_names consistent throughout the full workflow
-  sample_info$sample_name <-  gsub(".*/", "", sample_info$filename)
-
-  # Make sure directory exists
-  if (is.null(save_folder)){
-    save_folder = "./tmp/peaks_identified/"
-    if (!dir.exists("./tmp")){
-      dir.create("./tmp")
-      dir.create("./tmp/peaks_identified")
-    }
-  }
-
+  sample_name <- gsub("[.].*|.*[/]", "", input)
   # Return if output file already has been preprocessed
-  output_file <- paste0(save_folder, gsub("[.].*", ".Rdata", sample_info$sample_name[index]))
-  print(output_file)
-  if (file.exists(output_file)) return()
+  if (file.exists(output)) return()
 
   # Make the XCMSnExp object
   loaded_file <-
     MSnbase::readMSData(
-      files = sample_info$filename[index],
-      pdata = new("NAnnotatedDataFrame", sample_info[, c("sample_name", "group")]),
+      files = input,
+      pdata = new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)),
       mode = "onDisk",
       msLevel. = 1L
     )
+
   # Call peaks
   peaks_file  <- xcms::findChromPeaks(loaded_file, cwp)
   # Save result
-  save(peaks_file, file=output_file)
+  save(peaks_file, file=output)
 }
 
 
 
 #' Fast concatenation of XCMS peak picked files
 #'
-#' @param peaks_identified_path the location of the peak picked files
+#' @param inputs the peak picked files
+#' @param output the msnbase element of peak picked files
 #' @import xcms
+#' @importFrom readr read_rds
+#' @importFrom readr write_rds
 #' @return an XCMSset ready for peak grouping and alignment
 #' @export
-collect_files <- function(peaks_identified_path = "./tmp/peaks_identified/"){
+cFindChromPeaksStep2 <- function(inputs, output){
   ## This function concatenates the files by building a string followed by concatenation.
   ## By doing it this way we reduce running time from n^2 to n allowing us to concatenate several thousand files in minutes rather than days.
 
-  files <- list.files(peaks_identified_path, full.names = T)
-  if (length(files)==0){
-    stop(paste0("No peak called files in ", peaks_identified_path, ". The path is wrong or files haven't been peak picked yet"))}
+  if (length(inputs)<2){
+    stop("Less than two files in the inputs. Please use *all* peak called files as a vector in the inputs parameter")}
 
   # First element of string
   concatenate_string <- "c("
-  for (i in 1:length(files)){
+  for (i in 1:length(inputs)){
+
     # arbitrary name for the concatenated list
     name <- paste0("peak", i)
-    file <- files[i]
-    load(file) # loads XCMSnExp object w. identified peaks
+    file <- inputs[i]
+    peaks_file <- readr::read_rds(file) # loads XCMSnExp object w. identified peaks
     assign(name, peaks_file)
 
     # Prepare for another file...
-    if (i<length(files)){concatenate_string <- paste0(c(concatenate_string, name, ","), collapse = "")}
+    if (i<length(inputs)){concatenate_string <- paste0(c(concatenate_string, name, ","), collapse = "")}
     # Or end the concatenation function c()
-    if (i==length(files)){concatenate_string <- paste0(c(concatenate_string,  name, ")"), collapse = "")}
+    if (i==length(inputs)){concatenate_string <- paste0(c(concatenate_string,  name, ")"), collapse = "")}
   }
 
   # Evaluate string
-  xset_peaksIdentified <- eval(parse(text = concatenate_string))
-  save(xset_peaksIdentified, file = "./tmp/xset_peaksIdentified.Rdata")
-  return(xset_peaksIdentified)
+  object <- eval(parse(text = concatenate_string))
+  readr::write_rds(object, output)
 }
 
 

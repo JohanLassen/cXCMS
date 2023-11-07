@@ -1,35 +1,44 @@
 
 
+.hasFilledPeaks   <- utils::getFromNamespace(".hasFilledPeaks", "xcms")
+.param2string     <- utils::getFromNamespace(".param2string", "xcms")
+.getChromPeakData <- utils::getFromNamespace(".getChromPeakData", "xcms")
+.copy_env         <- utils::getFromNamespace(".copy_env", "xcms")
+XProcessHistory   <- utils::getFromNamespace("XProcessHistory", "xcms")
+addProcessHistory <- utils::getFromNamespace("addProcessHistory", "xcms")
+
 #' Preparation for the computational intensive peak filling step
 #' @description cPrepFillChromPeaks, cGetChromPeakData, and cFillChromPeaks are small constructs of fillChromPeaks.
 #' @description By running the functions as suggested in the vignette, we minimize the RAM usage, thus making the workflow scalable to tens of thousands of files.
-#' @param object XCMSset as returned by the peak alignment step
-#' @param param the object returned by xcms::FillChromPeaksParam()
-#' @param msLevel level 1 or 2. Default 1 for untargeted metabolomics
+#' @param input path to XCMSset as returned by the peak alignment step
+#' @param fcp the object returned by xcms::FillChromPeaksParam()
+#' @param output path of the output file. This file goes into cFillChromPeaksStep2()
 #' @import xcms
-#'
+#' @importFrom MSnbase fileNames
+#' @importFrom MSnbase requiredFvarLabels
+#' @importFrom readr read_rds
+#' @importFrom readr write_rds
 #' @return a list object with all the necessary objects for the cGetChromPeakData and cFillChromPeaks functions
 #' @export
-cPrepFillChromPeaks <- function(object, param, msLevel = 1L, output_dir = "./tmp"){
-  # Object = MSnExp with peaks detected, retention times aligned, and peaks grouped
-  # param = parameter set made by FillChromPeaksParam()
+cFillChromPeaksStep1 <- function(input, output, fcp){
+  msLevel = 1L
+  object <- readr::read_rds(input)
 
   if (!xcms::hasFeatures(object)){stop("No feature definitions for MS level ", msLevel," present. Please run 'groupChromPeaks' first.")}
-  if (xcms:::.hasFilledPeaks(object)) {message("Filled peaks already present, adding still missing", " peaks.")}
-  #if (hasChromPeaks(object) & !.has_chrom_peak_data(object)) {object <- updateObject(object)}
+  if (.hasFilledPeaks(object)) {message("Filled peaks already present, adding still missing", " peaks.")}
 
-  expandMz  <- xcms::expandMz(param)
-  expandRt  <- xcms::expandRt(param)
-  fixedMz   <- xcms::fixedMz(param)
-  fixedRt   <- xcms::fixedRt(param)
-  ppm       <- xcms::ppm(param)
+  expandMz  <- xcms::expandMz(fcp)
+  expandRt  <- xcms::expandRt(fcp)
+  fixedMz   <- xcms::fixedMz(fcp)
+  fixedRt   <- xcms::fixedRt(fcp)
+  ppm       <- xcms::ppm(fcp)
 
   ## Define or extend the peak area from which the signal should be
   ## extracted.
   fdef       <- xcms::featureDefinitions(object)
   tmp_pks    <- xcms::chromPeaks(object)[, c("rtmin", "rtmax", "mzmin","mzmax")]
-  aggFunLow  <- median
-  aggFunHigh <- median
+  aggFunLow  <- stats::median
+  aggFunHigh <- stats::median
 
   pkArea <- do.call(
     rbind,
@@ -87,24 +96,24 @@ cPrepFillChromPeaks <- function(object, param, msLevel = 1L, output_dir = "./tmp
   }
 
   ## Split the object by file and define the peaks for which
-  objectL <- vector("list", length(fileNames(object)))
+  objectL <- vector("list", length(MSnbase::fileNames(object)))
   pkAreaL <- objectL
 
   ## We need "only" a list of OnDiskMSnExp, one for each file but
   ## instead of filtering by file we create small objects to keep
   ## memory requirement to a minimum.
-  req_fcol  <- requiredFvarLabels("OnDiskMSnExp")
+  req_fcol  <- MSnbase::requiredFvarLabels("OnDiskMSnExp")
   min_fdata <- object@featureData@data[, req_fcol]
   rt_range  <- range(pkArea[, c("rtmin", "rtmax")])
-  if (hasAdjustedRtime(object))
-    min_fdata$retentionTime <- adjustedRtime(object)
-  for (i in 1:length(fileNames(object))) {
+  if (xcms::hasAdjustedRtime(object))
+    min_fdata$retentionTime <- xcms::adjustedRtime(object)
+  for (i in 1:length(MSnbase::fileNames(object))) {
     fd <- min_fdata[min_fdata$fileIdx == i, ]
     fd$fileIdx <- 1L
     objectL[[i]] <- new(
       "OnDiskMSnExp",
       processingData = new("MSnProcess",
-                           files = fileNames(object)[i]),
+                           files = MSnbase::fileNames(object)[i]),
       featureData = new("AnnotatedDataFrame", fd),
       phenoData = new("NAnnotatedDataFrame",
                       data.frame(sampleNames = "1")),
@@ -114,7 +123,7 @@ cPrepFillChromPeaks <- function(object, param, msLevel = 1L, output_dir = "./tmp
                            ionSource = "a",
                            analyser = "a",
                            detectorType = "a"))
-    ## Want to extract intensities only for peaks that were not found in a sample.
+    ## Extract intensities only for peaks that were not found in a sample.
     pkAreaL[[i]] <- pkArea[is.na(pkGrpVal[, i]), , drop = FALSE]
   }
   rm(pkGrpVal)
@@ -126,14 +135,14 @@ cPrepFillChromPeaks <- function(object, param, msLevel = 1L, output_dir = "./tmp
   mzCenterFun <- "wMean"
   if (length(ph)) {
     if (is(ph[[1]], "XProcessHistory")) {
-      prm <- ph[[1]]@param
-      findPeakMethod <- xcms:::.param2string(prm)
+      prm <- ph[[1]]@fcp
+      findPeakMethod <- .param2string(prm)
       ## Check if the param class has a mzCenterFun slot
       if (.hasSlot(prm, "mzCenterFun"))
         mzCenterFun <- prm@mzCenterFun
     }
   }
-  cp_colnames <- colnames(chromPeaks(object))
+  cp_colnames <- colnames(xcms::chromPeaks(object))
 
   ## Now rename that to the correct function name in xcms.
   mzCenterFun <- paste("mzCenter", gsub(mzCenterFun, pattern = "mzCenter.", replacement = "", fixed = TRUE), sep=".")
@@ -144,26 +153,29 @@ cPrepFillChromPeaks <- function(object, param, msLevel = 1L, output_dir = "./tmp
                         "objectL"=objectL,
                         "sampleIndex"=as.list(1:length(objectL)),
                         "cp_colnames"=cp_colnames,
-                        "param" = param)
-  save(prepared_data, paste0(output_dir, "prepared_data.Rdata"))
-  return(
-    )
-
+                        "param" = fcp)
+  readr::write_rds(prepared_data, output)
+  return()
 }
 
 
 #' Intensive peak extraction step performed file-wise (parallel in cluster workflows)
 #'
-#' @param prepared_data as returned by cXCMS::cPrepFillChromPeaks()
-#' @param index the file index in sample_info
-#' @param output_dir the tmp directory for storage of extracted peaks
+#' @param input the file index in sample_info
+#' @param output the tmp directory for storage of extracted peaks
 #' @import xcms
+#' @importFrom readr read_rds
+#' @importFrom readr write_rds
 #' @return a res object for the final peak integration.
 #' @export
-cGetChromPeakData <- function(prepared_data, index, output_dir = "./tmp/integration_tmp/"){
-  if (!dir.exists(output_dir)){dir.create(output_dir)}
+cFillChromPeaksStep2 <- function(input, output){
+
+  # Input: The location of the prepared file from cFillChromPeaksStep1
+  # Output: The file-wise output
+  prepared_data <- readr::read_rds(input)
+
   res <-
-    xcms:::.getChromPeakData(
+    .getChromPeakData(
       object      = prepared_data$objectL[[index]],
       peakArea    = prepared_data$pkAreaL[[index]],
       sample_idx  = prepared_data$sampleIndex[[index]],
@@ -171,21 +183,29 @@ cGetChromPeakData <- function(prepared_data, index, output_dir = "./tmp/integrat
       mzCenterFun = prepared_data$mzCenterFun
     )
   # Make separate folder
-  save(res, file = gsub("X", index, paste0(output_dir, "resX.Rdata")))
+  .checkdir(output = output)
+  readr::write_rds(res, output)
+  return()
 }
 
 
 
-#' Final fill chrom peak function
+#' fill chrom peak function 3
 #'
-#' @param prepared_data the file/object returned by cXCMS::cPrepFillChromPeaks()
+#' @param inputFromStep1 Output of cFillChromPeaksStep1() function
+#' @param inputFromStep2 Output of cFillChromPeaksStep2() function
+#' @param output the output which contains the result of the preprocessing
 #'
 #' @return a preprocessed xcms object
+#' @import xcms
+#' @importFrom MSnbase fileNames
+#' @importFrom readr read_rds
+#' @importFrom readr read_rds
 #' @export
-cfillChromPeaks <- function(prepared_data = "./tmp/prepared_data.Rdata"){
+cFillChromPeaksStep3 <- function(inputFromStep1, inputFromStep2, output){
 
   # Load the data
-  load(prepared_data)
+  prepared_data <- readr::read_rds(inputFromStep1)
   objectL     <- prepared_data$objectL
   pkAreaL     <- prepared_data$pkAreaL
   sample_idx  <- prepared_data$sampleIndex
@@ -195,11 +215,11 @@ cfillChromPeaks <- function(prepared_data = "./tmp/prepared_data.Rdata"){
   fdef        <- prepared_data$fdef
   param       <- prepared_data$param
   msLevel     <- 1
+  rm(prepared_data)
 
   res_list <- list()
-  for (i in seq_along(objectL)){
-    load(gsub("X", i, "./tmp/integration_tmp/resX.Rdata"))
-    res_list[[i]] <- res
+  for (i in seq_along(inputFromStep2)){
+    res_list[[i]] <- readr::read_rds(inputFromStep2[i])
   }
 
   # START MERGING and save xset_integrated
@@ -225,7 +245,7 @@ cfillChromPeaks <- function(prepared_data = "./tmp/prepared_data.Rdata"){
 
   ## Get the msFeatureData:
   newFd <- new("MsFeatureData")
-  newFd@.xData <- xcms:::.copy_env(object@msFeatureData)
+  newFd@.xData <- .copy_env(object@msFeatureData)
   object@msFeatureData <- new("MsFeatureData")
   incr <- nrow(chromPeaks(newFd))
   counter = 1
@@ -240,7 +260,7 @@ cfillChromPeaks <- function(prepared_data = "./tmp/prepared_data.Rdata"){
   ## Combine feature data with those from other MS levels
   fdef <- rbind(
     fdef,
-    featureDefinitions(newFd)[featureDefinitions(newFd)$ms_level != msLevel,,drop = FALSE])
+    xcms::featureDefinitions(newFd)[xcms::featureDefinitions(newFd)$ms_level != msLevel,,drop = FALSE])
 
   if (!any(colnames(fdef) == "ms_level")){
     fdef$ms_level <- 1L
@@ -250,7 +270,7 @@ cfillChromPeaks <- function(prepared_data = "./tmp/prepared_data.Rdata"){
 
   ## Define IDs for the new peaks; include fix for issue #347
   maxId <- max(as.numeric(
-    sub("M", "", sub("^CP", "", rownames(chromPeaks(newFd))))))
+    sub("M", "", sub("^CP", "", rownames(xcms::chromPeaks(newFd))))))
   if (maxId < 1)
     stop("chromPeaks matrix lacks rownames; please update ",
          "'object' with the 'updateObject' function.")
@@ -259,9 +279,9 @@ cfillChromPeaks <- function(prepared_data = "./tmp/prepared_data.Rdata"){
     paste0("CP", "%0", ceiling(log10(toId + 1L)), "d"),
     (maxId + 1L):toId)
 
-  chromPeaks(newFd) <- rbind(chromPeaks(newFd),
+  chromPeaks(newFd) <- rbind(xcms::chromPeaks(newFd),
                              res[, -ncol(res)])
-  cpd           <- extractROWS(xcms::chromPeakData(newFd), rep(1L, nrow(res)))
+  cpd           <- S4Vectors::extractROWS(xcms::chromPeakData(newFd), rep(1L, nrow(res)))
   cpd[,]        <- NA
   cpd$ms_level  <- as.integer(msLevel)
   cpd$is_filled <- TRUE
@@ -277,15 +297,15 @@ cfillChromPeaks <- function(prepared_data = "./tmp/prepared_data.Rdata"){
 
   ## Add a process history step
   ph <-
-    xcms:::XProcessHistory(
+    XProcessHistory(
       param = param,
       date. = date(),
       type. = "Missing peak filling",
-      fileIndex = 1:length(fileNames(object)),
+      fileIndex = 1:length(MSnbase::fileNames(object)),
       msLevel = msLevel
     )
 
-  xset_integrated <- xcms:::addProcessHistory(object, ph) ## this validates the object.
-  save(xset_integrated, file = "./tmp/xset_integrated.Rdata")
-  return(xset_integrated)
+  xset_integrated <- addProcessHistory(object, ph) ## this validates the object.
+  readr::write_rds(xset_integrated, output)
+  return()
 }
