@@ -26,13 +26,13 @@
 #' @param groups the group variable used in new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)). The group variable might bias the analysis and in big datasets it might beneficial setting groups = None to do random group assignment
 #' @importFrom xcms findChromPeaks
 #' @importFrom MSnbase readMSData
+#' @importFrom readr write_rds
 #' @return peak picked files in the save_folder location (./tmp/peaks_identified)
 #' @export
 cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
 
   if (typeof(input)!="character"){stop("Input must be a string\n")}
   if (!grepl("mzML|mzXML", input)){stop("Input must be a mzML or mzXML file\n")}
-  if (!grepl("[.]Rdata|[.]rdata", output)){stop("Output file must be a rdata file type (.Rdata or .rdata). Just edit the name of the output files\n")}
   if (is.null(groups)){
     warning("No groups provided (Experimental groups). Using random group assignment\n")
     groups = sample(paste0("group", 1:2), 1)}
@@ -53,7 +53,7 @@ cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
   # Call peaks
   peaks_file  <- xcms::findChromPeaks(loaded_file, cwp)
   # Save result
-  save(peaks_file, file=output)
+  write_rds(peaks_file, output)
 }
 
 

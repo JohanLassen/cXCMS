@@ -7,119 +7,153 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r}
+library(cXCMS)
+library(xcms)
+library(msdata)
+library(MsExperiment)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(tibble)
+```
 
-# ```{r, include = FALSE}
-# knitr::opts_chunk$set(
-#   collapse = TRUE,
-#   comment = "#>"
-# )
-# ```
-# 
-# ```{r setup}
-# library(cXCMS)
-# library(xcms)
-# ```
-# 
-# ## Generate sample info dataframe
-# ```{r}
-# files <- list.files("/home/johan/Documents/lcms_exampledata", full.names = T)
-# sample_info <- data.frame("filename"=files, "group"=grepl("QC", files))
-# head(sample_info)
-# ```
-# 
-# # Perform peak picking
-# ```{r}
-# cwp <- 
-#   CentWaveParam(
-#     peakwidth=c(4,30), 
-#     snthresh=6, 
-#     ppm=12, 
-#     prefilter=c(3,200), 
-#     mzdiff=0.01
-#     ) 
-# 
-# for (sample in 1:nrow(sample_info)){
-#   print(paste("sample", sample, "of", nrow(sample_info)))
-#   cFindChromPeaks(sample_info = sample_info[1:5,], cwp = cwp, index = sample)
-# }
-# 
-# xset_peaksIdentified <- collect_files()
-# ```
-# 
-# # Perform grouping
-# 
-# This is just the regular xcms grouping
-# ```{r}
-# pdp <- PeakDensityParam(sampleGroups=xset_peaksIdentified@phenoData@data$group,
-#                         bw           = 10, 
-#                         minFraction  = 0.5)
-# 
-# xset_grouped_first <- groupChromPeaks(xset_peaksIdentified, param=pdp)
-# 
-# # Save
-# save(xset_grouped_first, file = "./tmp/xset_grouped_first.Rdata")
-# ```
-# 
-# 
-# # Perform retention time correction
-# ```{r}
-# param <- PeakGroupsParam(smooth = "loess",
-#                          minFraction	= 0.5,
-#                          span = 0.25,
-#                          extraPeaks = 250, # for full dataset 200 does not work
-#                          family = "gaussian")
-# 
-# xset_aligned <- adjustRtime(xset_grouped_first, param)
-# xset_aligned <- applyAdjustedRtime(xset_aligned)
-# save(xset_aligned, file = "./tmp/xset_aligned.Rdata")
-# ```
-# 
-# 
-# # Regroup
-# ```{r}
-# pdp <- PeakDensityParam(sampleGroups=xset_peaksIdentified@phenoData@data$group,
-#                         bw           = 10, 
-#                         minFraction  = 0.5)
-# 
-# xset_grouped_second <- groupChromPeaks(xset_peaksIdentified, param=pdp)
-# 
-# # Save
-# save(xset_grouped_second, file = "./tmp/xset_grouped_second.Rdata")
-# ```
-# 
-# # Integrate (fill missing peaks)
-# 
-# ### Prepare the objects
-# ```{r}
-# params        <- FillChromPeaksParam()
-# prepared_data <- cPrepFillChromPeaks(xset_grouped_second, param = params)
-# save(prepared_data, file="./tmp/prepared_data.Rdata")
-# ```
-# 
-# ### Extracting peaks from the spectras
-# This is the memory intensive step. Beware that it will always rerun all files as the peaks depend on previous steps
-# ```{r}
-# # load("./tmp/prepared_data.Rdata")
-# for (i in 1:nrow(sample_info)){
-#   cGetChromPeakData(prepared_data, index = i)
-# }
-# 
-# ```
-# 
-# ```{r}
-# ms_integrated <- cfillChromPeaks(prepared_data = "./tmp/prepared_data.Rdata")
-# ```
-# 
-# ```{r}
-# # Extract tabular data from XCMSnExp object
-# rtmz_intervals <- featureDefinitions(ms_integrated)
-# feat_intensity <- featureValues(ms_integrated)
-# # featureValues(xset_integrated, method = "medret", value = "into") %>% as_tibble() %>% head()
-# tabular_data   <- cbind(rtmz_intervals, feat_intensity) |> as.data.frame()
-# tabular_data$peakidx <- NULL
-# if(!dir.exists("./results")) { dir.create("./results") }
-# write.csv(tabular_data, "./results/xcms_preprocessed.csv")
-# 
+The functions of this package are meant for large data sets compared to the computer at hand. This means that all of the functions takes the file path as input and outputs another file, which is saved to your SSD. Hence, the computational demands are lifted off the RAM (on PCs) and for High Performance Computing parallelization becomes feasible.
+
+# Running the workflow on 2 files
+
+## Peak Identification
+
+## 1. Defining the mzML files of our experiment (from msdata package)
+```{r}
+data_files <- dir(system.file("sciex", package = "msdata"), full.names = TRUE)
+data_files
+```
+
+On your system, you might want something like this:
+```
+data_folder <- "~/path/to/experiment"
+data_files <- list.files(data_folder, recursive=TRUE, full.names=TRUE)
+```
+
+## 2. Setting output files
+
+note that it is strongly advised to use .rds as file suffix although all names should work
+```{r}
+peak_directory <- "./tmp/peak_picked"
+dir.create(peak_directory, recursive = TRUE, showWarnings = FALSE)
+
+peak_files <- paste0(peak_directory, gsub(".*/", "/", data_files))
+peak_files <- gsub(".mzML", ".rds", peak_files)
+peak_files <- gsub("-", "_", peak_files)
+
+peak_files
+```
+
+## 3. Running peak picking on one file at a time
+
+```{r}
+
+# Set the peak picking parameters
+cwp <- CentWaveParam()
+
+for (i in seq_along(data_files)){
+  input  <- data_files[i]
+  output <- peak_files[i]
+  
+  # if file exists continue
+  if (file.exists(output)) next
+  
+  cXCMS::cFindChromPeaksStep1(input = input, output = output, cwp = cwp)
+}
+
+```
+
+## 4. Merging peak picked files prior to peak grouping
+
+This step has been highly optimized compared to previous methods, reducing running time from nlog(n) to n. In practice this does not matter for less than 1000 samples, but in the range of 5000-10000 samples we go from days to hours in processing time. In the +10000 sample range the old method was not viable at all. This function uses the exact same function as the original method but uses a workaround to avoid redundant checks.
+
+```{r}
+
+output_peak_identified <- "./tmp/peak_picked_dataset.rds"
+cFindChromPeaksStep2(inputs = peak_files, output = output_peak_identified)
+
+```
+
+## Grouping 1
+
+```{r}
+
+msobject <- readr::read_rds(output_peak_identified)
+pdp      <- xcms::PeakDensityParam(sampleGroups = msobject@phenoData@data$group)
+msobject <- groupChromPeaks(msobject, pdp)
+
+```
+
+## Alignment
+
+```{r}
+pgp      <- xcms::PeakGroupsParam()
+msobject <- adjustRtime(msobject, pgp)
+```
+
+## Grouping 2
+```{r}
+pdp      <- xcms::PeakDensityParam(sampleGroups = msobject@phenoData@data$group)
+msobject <- groupChromPeaks(msobject, pdp)
+
+output_integration_ready <- "./tmp/integration_ready.rds"
+readr::write_rds(msobject, output_integration_ready)
+```
+
+## Integration
+This is the most memory consuming step in the analysis. Both in the original xcms and this HPC optimized version.
+
+```{r}
+fcp           <- FillChromPeaksParam(expandMz = 0, expandRt = 0)
+output_step1  <- "./tmp/integration_package.rds"
+prepared_data <- cXCMS::cFillChromPeaksStep1(input = output_integration_ready, fcp = fcp, output = output_step1)
+```
+
+### Extracting peaks from the spectras
+This is the memory intensive step. Beware that it will always rerun all files as the peaks depend on previous steps
+```{r}
+# Change subdir from peak_picked to integrated for the output files (n=sample size) of cFillChromPeaksStep2 step
+integration_files <- gsub("peak_picked", "integrated", peak_files)
+
+for (i in seq_along(integration_files)){
+  cFillChromPeaksStep2(input = output_step1, output = integration_files[i], index = i)
+}
+
+```
+
+```{r}
+output <- "./tmp/preprocessing_output.rds"
+cFillChromPeaksStep3(inputFromStep1 = output_step1, inputFromStep2 = integration_files, output = output)
+```
+
+## Output of preprocessing
+
+```{r}
+
+ms_preprocessed <- read_rds(output)
+feature_name   <- 
+  xcms::featureDefinitions(ms_preprocessed) |> 
+  as_tibble() |> 
+  mutate(feature_name = paste0("M", round(mzmed), "T", round(rtmed)),
+         feature_name = make.unique(feature_name)) |> 
+  pull(feature_name)
+
+feature_values  <- 
+  xcms::featureValues(ms_preprocessed) |> 
+  as_tibble() |> 
+  mutate(feature_name = feature_name) |> 
+  pivot_longer(cols = -feature_name) |> 
+  pivot_wider(names_from = feature_name, values_from = value) 
+
+```
+
+
 # # clean all intermediate files
 # unlink("tmp", recursive = TRUE)
 # ```

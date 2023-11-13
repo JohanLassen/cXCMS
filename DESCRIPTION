@@ -1,11 +1,14 @@
 Package: cXCMS
 Type: Package
-Title: What the Package Does (Title Case)
+Title: An xcms wrapper package for high performance computation (HPC) cluster worfklows 
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Johan Lassen
+Maintainer: The package maintainer <johanlassen@live.dk>
+Description: 
+    The workflow makes the peak picking and the peak integration parallel to 
+    (1) reduce memory consumption and 
+    (2) improve support for multi-node high performance cluster processing. 
+    The first achievement benefits both local computing and HPC, while the second achievement allows exensive parallelization on clusters.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -15,6 +18,14 @@ Suggests:
 VignetteBuilder: knitr
 RoxygenNote: 7.2.3
 Imports: 
+    dplyr,
+    msdata,
+    MsExperiment,
     MSnbase,
     readr,
+    S4Vectors,
+    stats,
+    tibble,
+    tidyr,
+    utils,
     xcms

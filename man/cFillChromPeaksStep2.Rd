@@ -4,12 +4,14 @@
 \alias{cFillChromPeaksStep2}
 \title{Intensive peak extraction step performed file-wise (parallel in cluster workflows)}
 \usage{
-cFillChromPeaksStep2(input, output)
+cFillChromPeaksStep2(input, output, index)
 }
 \arguments{
 \item{input}{the file index in sample_info}
 
 \item{output}{the tmp directory for storage of extracted peaks}
+
+\item{index}{the index of the sample in the sample list (i.e., first file=1, second file=2...)}
 }
 \value{
 a res object for the final peak integration.

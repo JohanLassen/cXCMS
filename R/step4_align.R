@@ -11,14 +11,13 @@ processHistory <- utils::getFromNamespace("processHistory", "xcms")
 .PROCSTEP.RTIME.CORRECTION <- utils::getFromNamespace(".PROCSTEP.RTIME.CORRECTION", "xcms")
 
 
-
 #' Auxillary function for adjust R time function
 #'
 #' @param object ms object
 #' @param param xcms::peakgroupsparam object
 #'
 #' @return pkGrp object
-adjustRtimePeakGroups <- function(object, param = PeakGroupsParam()) {
+c_adjustRtimePeakGroups <- function(object, param = PeakGroupsParam()) {
 
   msLevel = 1L
   if (!is(object, "XCMSnExp"))
@@ -60,8 +59,17 @@ adjustRtimePeakGroups <- function(object, param = PeakGroupsParam()) {
 #' @param subset The code is rewritten such that the subset option is no longer available. All samples will be aligned.
 #' @param subsetAdjust see "subset"
 #'
+#' @importFrom stats median
+#' @importFrom stats loess
+#' @importFrom stats na.omit
+#' @importFrom stats predict
+#' @importFrom stats quantile
+#' @importFrom stats approx
+#' @importFrom stats lsfit
+#' @import utils
+#' @import xcms
 #' @return adjusted rtimes
-do_adjustRtime_peakGroups <-
+c_do_adjustRtime_peakGroups <-
   function(peaks, peakIndex, rtime, minFraction = 0.9, extraPeaks = 1,
            smooth = c("loess", "linear"), span = 0.2,
            family = c("gaussian", "symmetric"),
@@ -169,8 +177,8 @@ do_adjustRtime_peakGroups <-
         ptsrange <- range(pts$rt)
         minidx <- rtime[[i_all]] < ptsrange[1]
         maxidx <- rtime[[i_all]] > ptsrange[2]
-        rtdevsmo[[i]][minidx] <- rtdevsmo[[i]][head(which(!minidx), n = 1)]
-        rtdevsmo[[i]][maxidx] <- rtdevsmo[[i]][tail(which(!maxidx), n = 1)]
+        rtdevsmo[[i]][minidx] <- rtdevsmo[[i]][utils::head(which(!minidx), n = 1)]
+        rtdevsmo[[i]][maxidx] <- rtdevsmo[[i]][utils::tail(which(!maxidx), n = 1)]
       }
       ## Finally applying the correction
       rtime_adj[[i_all]] <- rtime[[i_all]] - rtdevsmo[[i]]
@@ -184,44 +192,46 @@ do_adjustRtime_peakGroups <-
 #'
 #' @param object ms object
 #' @param param xcms::PeakGroupsParam
-#'
+#' @import xcms
+#' @importFrom MSnbase rtime
+#' @importFrom MSnbase fileNames
 #' @return aligned ms object
 #' @export
 adjustRtime <-
   function(object, param) {
-            if (hasChromPeaks(object) & !.has_chrom_peak_data(object))
-              object <- updateObject(object)
+            if (xcms::hasChromPeaks(object) & !.has_chrom_peak_data(object))
+              object <- xcms::updateObject(object)
             msLevel <- 1L
             startDate <- date()
             ## If param does contain a peakGroupsMatrix extract that one,
             ## otherwise generate it.
-            if (nrow(peakGroupsMatrix(param))){
-              pkGrpMat <- peakGroupsMatrix(param)
+            if (nrow(xcms::peakGroupsMatrix(param))){
+              pkGrpMat <- xcms::peakGroupsMatrix(param)
               } else {
-              pkGrpMat <- adjustRtimePeakGroups(object, param = param)
+              pkGrpMat <- c_adjustRtimePeakGroups(object, param = param)
               }
             message("Data must only contain one(!) MS level")
-            res <- do_adjustRtime_peakGroups(
-              peaks = chromPeaks(object, msLevel = msLevel),
+            res <- c_do_adjustRtime_peakGroups(
+              peaks = xcms::chromPeaks(object, msLevel = msLevel),
               # OBS: removed .update_feature_definitions, since we only have one MS level!
-              peakIndex = featureDefinitions(object)$peakidx,
-              rtime = rtime(object, bySample = TRUE),
-              minFraction = minFraction(param),
-              extraPeaks = extraPeaks(param),
+              peakIndex = xcms::featureDefinitions(object)$peakidx,
+              rtime = MSnbase::rtime(object, bySample = TRUE),
+              minFraction = xcms::minFraction(param),
+              extraPeaks = xcms::extraPeaks(param),
               smooth = "loess",
               span = 0.8,
               family = "gaussian",
               peakGroupsMatrix = pkGrpMat,
               # OBS: subset is always the full dataset
-              subset = 1:length(fileNames(object)),
-              subsetAdjust = subsetAdjust(param)
+              subset = 1:length(MSnbase::fileNames(object)),
+              subsetAdjust = xcms::subsetAdjust(param)
             )
             ## Add the pkGrpMat that's being used to the param object.
             peakGroupsMatrix(param) <- pkGrpMat
             ## Dropping the peak groups but don't remove its process history
             ## step.
-            ph <- processHistory(object, type = .PROCSTEP.PEAK.GROUPING)
-            object <- dropFeatureDefinitions(object)
+            ph <- xcms::processHistory(object, type = .PROCSTEP.PEAK.GROUPING)
+            object <- xcms::dropFeatureDefinitions(object)
             ## Add the results. adjustedRtime<- should also fix the retention
             ## times for the peaks! Want to keep also the latest alignment
             ## information
@@ -231,10 +241,10 @@ adjustRtime <-
             }
             ## Add the process history step, get the msLevel from the peak
             ## detection step.
-            ph <- processHistory(object, type = .PROCSTEP.PEAK.DETECTION)
+            ph <- xcms::processHistory(object, type = .PROCSTEP.PEAK.DETECTION)
             xph <- XProcessHistory(param = param, date. = startDate,
                                    type. = .PROCSTEP.RTIME.CORRECTION,
-                                   fileIndex = 1:length(fileNames(object)),
+                                   fileIndex = 1:length(MSnbase::fileNames(object)),
                                    msLevel = msLevel)
             object <- addProcessHistory(object, xph)
             validObject(object)
