@@ -14,7 +14,7 @@
   if (!file.exists(dir_path)){
     dir.create(dir_path, recursive=TRUE)
   }
-  return()
+  return("dir created")
 }
 
 
@@ -46,6 +46,7 @@ cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
     MSnbase::readMSData(
       files = input,
       pdata = new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)),
+      centroided. = TRUE,
       mode = "onDisk",
       msLevel. = 1L
     )

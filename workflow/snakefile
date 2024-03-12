@@ -1,0 +1,185 @@
+import os
+import re
+
+### Helper functions 
+def filter_strings(strings, substring):
+    return [s for s in strings if substring in s]
+
+def list_files_recursive(path):
+    """Lists all files in a directory and its subdirectories recursively."""
+    files = []
+    for root, _, filenames in os.walk(path):
+        for filename in filenames:
+            file_path = os.path.join(root, filename)
+            files.append(file_path)
+    return files
+
+### Identify files
+all_files = list_files_recursive("/faststorage/project/forensics/Kirstine/Kathrine_GHB_mzml")
+mzml_files = filter_strings(all_files, "mzML")
+
+### Generate directory structure
+tmp_folder = "./tmp/"
+peaks_folder = tmp_folder+"peak_picked/"
+integration_folder = tmp_folder+"peak_integrated/"
+results_folder = "./results/"
+
+os.makedirs(tmp_folder, exist_ok=True)
+os.makedirs(peaks_folder, exist_ok=True)
+os.makedirs(integration_folder, exist_ok=True)
+os.makedirs(results_folder, exist_ok=True)
+
+#################### Step 1: Peak Picking
+
+inputs = mzml_files
+outputs = [re.sub(".*Kirstine_", "", filnavn) for filnavn in inputs]
+outputs = [re.sub("/", "_", filnavn) for filnavn in outputs]
+outputs = [peaks_folder+re.sub("mzML", "rds", filnavn) for filnavn in outputs]
+
+rule peak_picking:
+    input: 
+        "{index}.mzML"
+    output: 
+        "{index}.rds"
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step1_peakcalling.R {input} {output}
+        """
+
+#################### Step 2: Merging files
+
+output_merged = "./tmp/peak_picked_merge_dataset.rds"
+inputs_path = peaks_folder
+
+rule peak_merging:
+    input: 
+        "{index}.rds"
+    output: 
+        output_merged
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step2_merging.R {input} {output}
+        """
+
+#################### Step 3: Grouping
+
+output_group1 = "./tmp/peak_grouped1_dataset.rds"
+
+rule peak_grouping1:
+    input: 
+        output_merged
+    output: 
+        output_group1
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step3_grouping1.R {input} {output}
+        """
+
+#################### Step 4: Alignment
+
+output_alignment= "./tmp/peak_aligned_dataset.rds"
+
+rule peak_alignment:
+    input: 
+        output_group1
+    output: 
+        output_alignment
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step4_alignment.R {input} {output}
+        """
+
+#################### Step 5: Grouping2
+
+output_group2 = "./tmp/peak_grouped2_dataset.rds"
+
+rule peak_grouping2:
+    input: 
+        output_alignment
+    output: 
+        output_group2
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step5_grouping2.R {input} {output}
+        """
+
+#################### Step 6: Integration1
+
+output_integration1 = "./tmp/peak_integration1_dataset.rds"
+
+rule peak_integration1:
+    input: 
+        output_group2
+    output: 
+        output_integration1
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step6_integration1.R {input} {output}
+        """
+
+#################### Step 7: Peak integration 2
+
+output_peakint2 = [re.sub("peak_picked", "peak_integrated", x) for x in outputs]
+
+rule peak_integration2:
+    input: 
+        output_integration1
+    output: 
+        "{index}.rds"
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step7_integration2.R {input} {output} {wildcards.index}
+        """
+
+#################### Step 8: Integration3
+
+output_integration3 = "./tmp/peak_integration3_dataset.rds"
+
+rule peak_integration3:
+    input: 
+        integration_folder
+    output: 
+        output_integration3
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step8_integration3.R {input} {output} {wildcards.index}
+        """
+
+#################### Step 9: Generate names for features in output
+output_feature_names = "./results/output_feature_names_pos.csv"
+
+rule output_feature_names_pos:
+    input: 
+        output_integration3
+    output: 
+        output_feature_names
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step9_writeoutput.R {input} {output}
+        """
+
+#################### Step 10: Generate CAMERA output
+output_feature_names = "./results/diffrep.csv"
+
+rule isotope_annotation:
+    input: 
+        output_integration3
+    output: 
+        output_feature_names
+    shell: 
+        """
+        echo jobinfo $SLURM_JOBID
+        Rscript ./scripts/step10_adduct_annotation.R {input} {output}
+        """
+```
+
+Please note that this is a direct conversion and may not fully take advantage of Snakemake's capabilities. For example, Snakemake allows for the use of wildcards and the definition of rules that can be applied to multiple files, which could simplify this workflow. Additionally, the SLURM-specific commands may need to be adjusted depending on your specific cluster configuration.
