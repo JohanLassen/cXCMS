@@ -7,7 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(cXCMS)
 library(xcms)
 library(msdata)
@@ -72,6 +72,7 @@ for (i in seq_along(data_files)){
 ## 4. Merging peak picked files prior to peak grouping
 
 This step has been highly optimized compared to previous methods, reducing running time from nlog(n) to n. In practice this does not matter for less than 1000 samples, but in the range of 5000-10000 samples we go from days to hours in processing time. In the +10000 sample range the old method was not viable at all. This function uses the exact same function as the original method but uses a workaround to avoid redundant checks.
+
 
 ```{r}
 
@@ -155,6 +156,6 @@ feature_values  <-
 
 
 # # clean all intermediate files
-# unlink("tmp", recursive = TRUE)
-# ```
-
+```
+unlink("tmp", recursive = TRUE)
+```

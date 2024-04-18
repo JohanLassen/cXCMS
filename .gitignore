@@ -1,3 +1,6 @@
 inst/doc
 .Rproj.user
 images
+vignettes/tmp
+/doc/
+/Meta/
