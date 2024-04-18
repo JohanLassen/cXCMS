@@ -1,57 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>/404.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/404.html</loc>
   </url>
   <url>
-    <loc>/articles/HPC_workflow.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/articles/HPC_workflow.html</loc>
   </url>
   <url>
-    <loc>/articles/index.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/articles/index.html</loc>
   </url>
   <url>
-    <loc>/articles/Tutorial.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/articles/Tutorial.html</loc>
   </url>
   <url>
-    <loc>/authors.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/authors.html</loc>
   </url>
   <url>
-    <loc>/index.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/index.html</loc>
   </url>
   <url>
-    <loc>/LICENSE-text.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/LICENSE-text.html</loc>
   </url>
   <url>
-    <loc>/LICENSE.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/LICENSE.html</loc>
   </url>
   <url>
-    <loc>/reference/adjustRtime.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/adjustRtime.html</loc>
   </url>
   <url>
-    <loc>/reference/cFillChromPeaksStep1.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/cFillChromPeaksStep1.html</loc>
   </url>
   <url>
-    <loc>/reference/cFillChromPeaksStep2.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/cFillChromPeaksStep2.html</loc>
   </url>
   <url>
-    <loc>/reference/cFillChromPeaksStep3.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/cFillChromPeaksStep3.html</loc>
   </url>
   <url>
-    <loc>/reference/cFindChromPeaksStep1.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/cFindChromPeaksStep1.html</loc>
   </url>
   <url>
-    <loc>/reference/cFindChromPeaksStep2.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/cFindChromPeaksStep2.html</loc>
   </url>
   <url>
-    <loc>/reference/c_adjustRtimePeakGroups.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/c_adjustRtimePeakGroups.html</loc>
   </url>
   <url>
-    <loc>/reference/c_do_adjustRtime_peakGroups.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/c_do_adjustRtime_peakGroups.html</loc>
   </url>
   <url>
-    <loc>/reference/dot-checkdir.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/dot-checkdir.html</loc>
   </url>
   <url>
-    <loc>/reference/index.html</loc>
+    <loc>https://johanlassen.github.io/cXCMS/reference/index.html</loc>
   </url>
 </urlset>

@@ -1,0 +1,16 @@
+url: https://johanlassen.github.io/cXCMS/
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left:  [reference, articles, tutorials, news]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: Run Locally
+        href: articles/Tutorial.html
+      - text: HPC Workflow
+        href: articles/HPC_workflow.html

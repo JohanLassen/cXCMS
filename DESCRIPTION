@@ -32,3 +32,4 @@ Imports:
     utils,
     xcms
 Config/testthat/edition: 3
+URL: https://johanlassen.github.io/cXCMS/
