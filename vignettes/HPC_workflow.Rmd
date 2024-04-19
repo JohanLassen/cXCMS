@@ -39,6 +39,12 @@ Download the workflow from github
 git clone http://github.com/JohanLassen/xcms_workflow
 ```
 
+Navigate to the workflow folder
+```
+cd xcms_workflow
+```
+
+
 Now you should install the dependencies using conda. This might take some time.
 
 ```         

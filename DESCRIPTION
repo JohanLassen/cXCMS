@@ -18,18 +18,13 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 RoxygenNote: 7.3.1
-biocViews:
+biocViews: msdata, MsExperiment, S4Vectors, MSnbase, xcms
 Imports: 
     dplyr,
-    msdata,
-    MsExperiment,
-    MSnbase,
     readr,
-    S4Vectors,
     stats,
     tibble,
     tidyr,
-    utils,
-    xcms
+    utils
 Config/testthat/edition: 3
 URL: https://johanlassen.github.io/cXCMS/
