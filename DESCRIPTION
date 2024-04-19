@@ -31,6 +31,6 @@ Imports:
     MsExperiment (>= 1.4.0), 
     S4Vectors, 
 remotes:
-  sneumann/xcms
+  https://github.com/sneumann/xcms
 Config/testthat/edition: 3
 URL: https://johanlassen.github.io/cXCMS/
