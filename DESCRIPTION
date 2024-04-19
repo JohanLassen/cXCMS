@@ -21,15 +21,16 @@ RoxygenNote: 7.3.1
 biocViews: 
 Imports: 
     dplyr,
+    BiocManager,
     readr,
     stats,
     tibble,
     tidyr,
     utils,
     msdata, 
-    MsExperiment, 
+    MsExperiment (>= 1.4.0), 
     S4Vectors, 
     MSnbase, 
-    xcms
+    xcms (>= 4.0.2)
 Config/testthat/edition: 3
 URL: https://johanlassen.github.io/cXCMS/
