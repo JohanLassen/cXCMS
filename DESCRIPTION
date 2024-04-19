@@ -20,6 +20,7 @@ VignetteBuilder: knitr
 RoxygenNote: 7.3.1
 biocViews: 
 Imports: 
+    xcms,
     dplyr,
     BiocManager,
     readr,
@@ -30,7 +31,5 @@ Imports:
     msdata, 
     MsExperiment (>= 1.4.0), 
     S4Vectors, 
-remotes:
-  https://github.com/sneumann/xcms
 Config/testthat/edition: 3
 URL: https://johanlassen.github.io/cXCMS/
