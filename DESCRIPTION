@@ -30,7 +30,7 @@ Imports:
     msdata, 
     MsExperiment (>= 1.4.0), 
     S4Vectors, 
-Depends:
-  xcms (>= 4.0.2)
+remotes:
+  sneumann/xcms
 Config/testthat/edition: 3
 URL: https://johanlassen.github.io/cXCMS/
