@@ -15,6 +15,7 @@ addProcessHistory <- utils::getFromNamespace("addProcessHistory", "xcms")
 #' @param fcp the object returned by xcms::FillChromPeaksParam()
 #' @param output path of the output file. This file goes into cFillChromPeaksStep2()
 #' @import xcms
+#' @importFrom stats median
 #' @importFrom MSnbase fileNames
 #' @importFrom MSnbase requiredFvarLabels
 #' @importFrom readr read_rds
