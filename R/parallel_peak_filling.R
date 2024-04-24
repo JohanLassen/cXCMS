@@ -187,7 +187,7 @@ cFillChromPeaksStep2 <- function(input, output, index){
       mzCenterFun = prepared_data$mzCenterFun
     )
   # Make separate folder
-  cXCMS:::.checkdir(output)
+  .checkdir(output)
   readr::write_rds(res, output)
   return("completed")
 }

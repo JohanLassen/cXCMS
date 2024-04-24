@@ -1,5 +1,5 @@
 ---
-title: "HPC Workflow"
+title: "HPC_workflow"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{HPC_workflow}

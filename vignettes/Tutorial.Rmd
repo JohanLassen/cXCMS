@@ -40,7 +40,11 @@ data_files <- list.files(data_folder, recursive=TRUE, full.names=TRUE)
 
 note that it is strongly advised to use .rds as file suffix although all names should work
 ```{r}
-peak_directory <- "./tmp/peak_picked"
+# Set temporary directlory (deleted after session)
+
+tmp_dir <- tempdir()
+
+peak_directory <- paste0(tmp_dir, "/peak_picked")
 dir.create(peak_directory, recursive = TRUE, showWarnings = FALSE)
 
 peak_files <- paste0(peak_directory, gsub(".*/", "/", data_files))
@@ -76,7 +80,7 @@ This step has been highly optimized compared to previous methods, reducing runni
 
 ```{r}
 
-output_peak_identified <- "./tmp/peak_picked_dataset.rds"
+output_peak_identified <- paste0(tmp_dir, "/peak_picked_dataset.rds")
 cFindChromPeaksStep2(inputs = peak_files, output = output_peak_identified)
 
 ```
@@ -103,7 +107,7 @@ msobject <- adjustRtime(msobject, pgp)
 pdp      <- xcms::PeakDensityParam(sampleGroups = msobject@phenoData@data$group)
 msobject <- groupChromPeaks(msobject, pdp)
 
-output_integration_ready <- "./tmp/integration_ready.rds"
+output_integration_ready <- paste0(tmp_dir, "/integration_ready.rds")
 readr::write_rds(msobject, output_integration_ready)
 ```
 
@@ -112,7 +116,7 @@ This is the most memory consuming step in the analysis. Both in the original xcm
 
 ```{r}
 fcp           <- FillChromPeaksParam(expandMz = 0, expandRt = 0)
-output_step1  <- "./tmp/integration_package.rds"
+output_step1  <- paste0(tmp_dir, "/integration_package.rds")
 prepared_data <- cXCMS::cFillChromPeaksStep1(input = output_integration_ready, fcp = fcp, output = output_step1)
 ```
 
@@ -129,7 +133,7 @@ for (i in seq_along(integration_files)){
 ```
 
 ```{r}
-output <- "./tmp/preprocessing_output.rds"
+output <- paste0(tmp_dir, "/preprocessing_output.rds")
 cFillChromPeaksStep3(inputFromStep1 = output_step1, inputFromStep2 = integration_files, output = output)
 ```
 
@@ -152,10 +156,6 @@ feature_values  <-
   pivot_longer(cols = -feature_name) |> 
   pivot_wider(names_from = feature_name, values_from = value) 
 
-```
 
-
-# # clean all intermediate files
-```
-unlink("tmp", recursive = TRUE)
+head(feature_values)
 ```

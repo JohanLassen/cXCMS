@@ -14,7 +14,7 @@
   if (!file.exists(dir_path)){
     dir.create(dir_path, recursive=TRUE)
   }
-  return("dir created")
+  return()
 }
 
 
@@ -46,13 +46,12 @@ cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
     MSnbase::readMSData(
       files = input,
       pdata = new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)),
-      centroided. = TRUE,
       mode = "onDisk",
       msLevel. = 1L
     )
 
   # Call peaks
-  peaks_file  <- xcms::findChromPeaks(loaded_file, cwp)
+  # peaks_file  <- xcms::findChromPeaks(loaded_file, cwp)
   # Save result
   write_rds(peaks_file, output)
 }
