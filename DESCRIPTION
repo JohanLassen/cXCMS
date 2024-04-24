@@ -20,7 +20,8 @@ Suggests:
     dplyr,
     msdata,
     MsExperiment,
-    tibble
+    tibble,
+    pkgdown
 VignetteBuilder: knitr
 RoxygenNote: 7.3.1
 biocViews: 
