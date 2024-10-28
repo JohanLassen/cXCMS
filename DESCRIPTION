@@ -31,6 +31,7 @@ Imports:
     stats,
     utils,
     MSnbase,
-    S4Vectors
+    S4Vectors,
+    fastmap
 Config/testthat/edition: 3
 URL: https://johanlassen.github.io/cXCMS/
