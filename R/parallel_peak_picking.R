@@ -51,7 +51,7 @@ cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
     )
 
   # Call peaks
-  # peaks_file  <- xcms::findChromPeaks(loaded_file, cwp)
+  peaks_file  <- xcms::findChromPeaks(loaded_file, cwp)
   # Save result
   write_rds(peaks_file, output)
 }

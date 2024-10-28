@@ -6,7 +6,7 @@
 .copy_env         <- utils::getFromNamespace(".copy_env", "xcms")
 XProcessHistory   <- utils::getFromNamespace("XProcessHistory", "xcms")
 addProcessHistory <- utils::getFromNamespace("addProcessHistory", "xcms")
-.get_closest_index <- utils::getFromNamespace(".get_closest_index", "xcms")
+#.get_closest_index <- utils::getFromNamespace(".get_closest_index", "xcms")
 
 #' Preparation for the computational intensive peak filling step
 #' @description cPrepFillChromPeaks, cGetChromPeakData, and cFillChromPeaks are small constructs of fillChromPeaks.

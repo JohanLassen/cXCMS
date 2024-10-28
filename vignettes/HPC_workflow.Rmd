@@ -1,5 +1,5 @@
 ---
-title: "HPC_workflow"
+title: "HPC workflow"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{HPC_workflow}
@@ -7,7 +7,9 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# Introduction
+The goal of cXCMS is to provide the framework for efficient high performance computing (HPC) untargeted LCMS data pre-processing. Also, the package memory optimizes the workflow in laptops environments (MacOS or Windows), allowing preprocessing of larger sample sizes on small PCs. The source code has been used for the project [Large-Scale metabolomics: Predicting biological age using 10,133 routine untargeted LC-MS measurements](\https://doi.org/10.1111/acel.13813).
+
+# HCP Introduction
 
 This tutorial is meant for high performance computing users on linux systems. The tutorial walks through the following parts:
 
