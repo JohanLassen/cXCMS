@@ -55,10 +55,16 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="cxcms">cXCMS<a class="anchor" aria-label="anchor" href="#cxcms"></a>
 </h1></div>
-<!-- badges: start -->
-<!-- badges: end -->
 <p>The goal of cXCMS is to provide the framework for efficient high performance computing (HPC) untargeted LCMS data pre-processing. Also, the package memory optimizes the workflow in laptops environments (MacOS or Windows), allowing preprocessing of larger sample sizes on small PCs. The source code has been used for the project <a href="%5Chttps://doi.org/10.1111/acel.13813" class="external-link">Large-Scale metabolomics: Predicting biological age using 10,133 routine untargeted LC-MS measurements</a>.</p>
-<p>Important notes about the package: 0. The preprocessing only works on MS1 data. If MS2 data are needed use regular xcms. 1. cXCMS reduces memory(ram) by processing files in parallel and/or sequentially. 2. Already peak called files do not have to be recalled, if new data are added. 3. The CPU time is actually (slightly) worse than xcms as files must be read and saved to disk. 4. To fully exploit the parallel functionality, use computional workflows (e.g., snakemake or gwf). 5. New peak picking softwares are continously published and we would like to refer to MZmine and OpenMS as they are faster per file (but haven’t been tested on large-scale untargeted data)</p>
+<p>Important notes about the package:</p>
+<ol start="0" style="list-style-type: decimal">
+<li><p>The preprocessing only works on MS1 data. If MS2 data are needed use regular xcms on a few samples.</p></li>
+<li><p>cXCMS reduces memory (RAM) by processing files in parallel and/or sequentially given ressources available.</p></li>
+<li><p>Already peak called files do not have to be recomputed, if new data are added.</p></li>
+<li><p>The CPU time is actually (slightly) worse than XCMS as files must be read and saved to disk. Use XCMS if everything fits into the memory.</p></li>
+<li><p>To fully exploit the parallel functionality, use computional workflows (e.g., snakemake or gwf).</p></li>
+<li><p>New peak picking softwares are continously published and we would like to refer to MZmine and OpenMS as they are faster per file (but haven’t been tested on large-scale untargeted data)</p></li>
+</ol>
 <div class="section level3">
 <h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h3>
@@ -66,43 +72,54 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("devtools")</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"johanLassen/cXCMS"</span><span class="op">)</span></span></code></pre></div>
+<p>This should work without major errors. We also refer to the HPC workflow (see articles).</p>
 </div>
 <div class="section level3">
 <h3 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h3>
-<p>The cluster xcms package is dependent on the regular xcms package. We aim to make as few changes as possible to ease the use and maintenance of the package.</p>
+<p>The cXCMS package is dependent on the regular XCMS package as ee aim to make as few changes as possible to ease the use and maintenance of the package.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://johanlassen.github.io/cXCMS/">cXCMS</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sneumann/xcms" class="external-link">xcms</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span></code></pre></div>
-<p>Here’s the idea behind the package: The workflow makes the peak picking and the peak integration parallel to (1) reduce memory consumption and (2) improve support for multi-node high performance cluster processing. The first achievement benefits all workflows by lowering memory requirements, while the second achievement allows parallelization. All of the processes are orchestrated by a simple metadata data frame that we will describe below.</p>
+<p>Here’s the idea behind the package:</p>
+<p>The workflow makes the peak picking and the peak integration parallel to</p>
+<ul>
+<li><p>Reduce memory consumption</p></li>
+<li><p>Improve support for multi-node high performance cluster processing.</p></li>
+</ul>
+<p>Hence, we can reduce memory usage in all setups (local computing and HPC) and improve processing times in HPC through parallelization.</p>
 <div class="section level5">
-<h5 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a>
+<h5 id="figure-1--workflow">Figure 1 | Workflow<a class="anchor" aria-label="anchor" href="#figure-1--workflow"></a>
 </h5>
-<figure><img src="./images/workflow.png" alt="workflow"><figcaption aria-hidden="true">
-workflow
-</figcaption></figure>
+<p><img src="reference/figures/workflow.png"></p>
 </div>
-</div>
-</div>
-<div class="section level1">
-<h1 id="running-the-workflow-on-2-files">Running the workflow on 2 files<a class="anchor" aria-label="anchor" href="#running-the-workflow-on-2-files"></a>
-</h1>
-<div class="section level2">
-<h2 id="peak-identification">Peak Identification<a class="anchor" aria-label="anchor" href="#peak-identification"></a>
-</h2>
 </div>
 <div class="section level2">
-<h2 id="id_1-defining-the-mzml-files-of-our-experiment-from-msdata-package">1. Defining the mzML files of our experiment (from msdata package)<a class="anchor" aria-label="anchor" href="#id_1-defining-the-mzml-files-of-our-experiment-from-msdata-package"></a>
+<h2 id="running-the-workflow-using-hpc">Running the workflow using HPC<a class="anchor" aria-label="anchor" href="#running-the-workflow-using-hpc"></a>
 </h2>
+<p>See <a href="https://johanlassen.github.io/cXCMS/articles/HPC_workflow.html">article</a></p>
+</div>
+<div class="section level2">
+<h2 id="running-the-workflow-locally">Running the workflow locally<a class="anchor" aria-label="anchor" href="#running-the-workflow-locally"></a>
+</h2>
+<div class="section level3">
+<h3 id="step-1---peak-identification">STEP 1 - Peak Identification<a class="anchor" aria-label="anchor" href="#step-1---peak-identification"></a>
+</h3>
+<div class="section level4">
+<h4 id="id_1-defining-the-mzml-files-of-our-experiment-from-msdata-package">1. Defining the mzML files of our experiment (from msdata package)<a class="anchor" aria-label="anchor" href="#id_1-defining-the-mzml-files-of-our-experiment-from-msdata-package"></a>
+</h4>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data_files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">dir</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"sciex"</span>, package <span class="op">=</span> <span class="st">"msdata"</span><span class="op">)</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">data_files</span></span>
-<span><span class="co">#&gt; [1] "/home/johan/R/x86_64-pc-linux-gnu-library/4.3/msdata/sciex/20171016_POOL_POS_1_105-134.mzML"</span></span>
-<span><span class="co">#&gt; [2] "/home/johan/R/x86_64-pc-linux-gnu-library/4.3/msdata/sciex/20171016_POOL_POS_3_105-134.mzML"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "C:/Users/johan/AppData/Local/R/win-library/4.3/msdata/sciex/20171016_POOL_POS_1_105-134.mzML"</span></span>
+<span><span class="co">#&gt; [2] "C:/Users/johan/AppData/Local/R/win-library/4.3/msdata/sciex/20171016_POOL_POS_3_105-134.mzML"</span></span></code></pre></div>
 <p>On your system, you might want something like this:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>data_folder <span class="ot">&lt;-</span> <span class="st">"~/path/to/experiment"</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>data_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(data_folder, <span class="at">recursive=</span><span class="cn">TRUE</span>, <span class="at">full.names=</span><span class="cn">TRUE</span>)</span></code></pre></div>
+<p>Once we have the paths to each of the files we can continue</p>
+</div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="id_2-setting-output-files">2. Setting output files<a class="anchor" aria-label="anchor" href="#id_2-setting-output-files"></a>
@@ -136,13 +153,7 @@ workflow
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">output</span><span class="op">)</span><span class="op">)</span> <span class="kw">next</span></span>
 <span>  </span>
 <span>  <span class="fu">cXCMS</span><span class="fu">::</span><span class="fu"><a href="reference/cFindChromPeaksStep1.html">cFindChromPeaksStep1</a></span><span class="op">(</span>input <span class="op">=</span> <span class="va">input</span>, output <span class="op">=</span> <span class="va">output</span>, cwp <span class="op">=</span> <span class="va">cwp</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co">#&gt; Warning in cXCMS::cFindChromPeaksStep1(input = input, output = output, cwp = cwp): No groups provided (Experimental groups). Using random group assignment</span></span>
-<span><span class="co">#&gt; Warning in .local(object, param, ...): Your data appears to be not centroided!</span></span>
-<span><span class="co">#&gt; CentWave works best on data in centroid mode.</span></span>
-<span><span class="co">#&gt; Warning in cXCMS::cFindChromPeaksStep1(input = input, output = output, cwp = cwp): No groups provided (Experimental groups). Using random group assignment</span></span>
-<span><span class="co">#&gt; Warning in .local(object, param, ...): Your data appears to be not centroided!</span></span>
-<span><span class="co">#&gt; CentWave works best on data in centroid mode.</span></span></code></pre></div>
+<span><span class="op">}</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="id_4-merging-peak-picked-files-prior-to-peak-grouping">4. Merging peak picked files prior to peak grouping<a class="anchor" aria-label="anchor" href="#id_4-merging-peak-picked-files-prior-to-peak-grouping"></a>
@@ -240,19 +251,6 @@ workflow
 <span>  <span class="fu">pivot_wider</span><span class="op">(</span>names_from <span class="op">=</span> <span class="va">feature_name</span>, values_from <span class="op">=</span> <span class="va">value</span><span class="op">)</span> </span></code></pre></div>
 </div>
 </div>
-<div class="section level1">
-<h1 id="id_-clean-all-intermediate-files"># clean all intermediate files<a class="anchor" aria-label="anchor" href="#id_-clean-all-intermediate-files"></a>
-</h1>
-</div>
-<div class="section level1">
-<h1 id="unlinktmp-recursive--true">unlink(“tmp”, recursive = TRUE)<a class="anchor" aria-label="anchor" href="#unlinktmp-recursive--true"></a>
-</h1>
-</div>
-<div class="section level1">
-<h1 id="section">```<a class="anchor" aria-label="anchor" href="#section"></a>
-</h1>
-</div>
-
   </main><aside class="col-md-3"><div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">

@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   HPC_workflow: HPC_workflow.html
   Tutorial: Tutorial.html
-last_built: 2024-10-28T12:07Z
+last_built: 2024-10-29T10:20Z
 urls:
   reference: https://johanlassen.github.io/cXCMS/reference
   article: https://johanlassen.github.io/cXCMS/articles
