@@ -20,6 +20,10 @@
 
 #' Single file peak identification for parallel processing and/or RAM optimization
 #'
+#' @description
+#' This function is a wrapper for the xcms::findChromPeaks function.
+#' It is designed to be used in parallel processing and/or RAM optimization and performs peak picking on single files and saves the output as rsd file.
+#' To concatenate the rsd outputs into a traditional XCMSnExp object use the cFindChromPeaksStep2 function.
 #' @param input filename of the mzML input files
 #' @param output output filename
 #' @param cwp native xcms CentWaveParam() function output
@@ -59,9 +63,12 @@ cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
 
 
 #' Fast concatenation of XCMS peak picked files
+#' @description
+#' This function concatenates the files by building a string followed by concatenation.
+#' By doing it this way we reduce running time from n^2 to n allowing us to concatenate several thousand files in minutes rather than days.
 #'
-#' @param inputs the peak picked files
-#' @param output the msnbase element of peak picked files
+#' @param inputs the peak picked files (>1 file names)
+#' @param output the msnbase element of peak picked files (file name)
 #' @import xcms
 #' @importFrom readr read_rds
 #' @importFrom readr write_rds

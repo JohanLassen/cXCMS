@@ -7,13 +7,14 @@
 cFindChromPeaksStep2(inputs, output)
 }
 \arguments{
-\item{inputs}{the peak picked files}
+\item{inputs}{the peak picked files (>1 file names)}
 
-\item{output}{the msnbase element of peak picked files}
+\item{output}{the msnbase element of peak picked files (file name)}
 }
 \value{
 an XCMSset ready for peak grouping and alignment
 }
 \description{
-Fast concatenation of XCMS peak picked files
+This function concatenates the files by building a string followed by concatenation.
+By doing it this way we reduce running time from n^2 to n allowing us to concatenate several thousand files in minutes rather than days.
 }

@@ -17,5 +17,6 @@ cFillChromPeaksStep3(inputFromStep1, inputFromStep2, output)
 a preprocessed xcms object
 }
 \description{
-fill chrom peak function 3
+This function is the third step in the peak filling process.
+It collects the files and generates the final integrated output (intragation of missing values)
 }

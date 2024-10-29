@@ -163,8 +163,10 @@ cFillChromPeaksStep1 <- function(input, output, fcp){
 }
 
 
-#' Intensive peak extraction step performed file-wise (parallel in cluster workflows)
+#' Intensive peak extraction step performed sample-wise
 #'
+#' @description
+#' This function is the second step in the peak filling process. It is performed file-wise and in parallel.
 #' @param input the file index in sample_info
 #' @param output the tmp directory for storage of extracted peaks
 #' @param index the index of the sample in the sample list (i.e., first file=1, second file=2...)
@@ -196,6 +198,11 @@ cFillChromPeaksStep2 <- function(input, output, index){
 
 
 #' fill chrom peak function 3
+#'
+#' @description
+#' This function is the third step in the peak filling process.
+#' It collects the files and generates the final integrated output (intragation of missing values)
+#'
 #'
 #' @param inputFromStep1 Output of cFillChromPeaksStep1() function
 #' @param inputFromStep2 Output of cFillChromPeaksStep2() function

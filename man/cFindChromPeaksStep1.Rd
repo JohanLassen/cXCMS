@@ -19,5 +19,7 @@ cFindChromPeaksStep1(input, output, cwp, groups = NULL)
 peak picked files in the save_folder location (./tmp/peaks_identified)
 }
 \description{
-Single file peak identification for parallel processing and/or RAM optimization
+This function is a wrapper for the xcms::findChromPeaks function.
+It is designed to be used in parallel processing and/or RAM optimization and performs peak picking on single files and saves the output as rsd file.
+To concatenate the rsd outputs into a traditional XCMSnExp object use the cFindChromPeaksStep2 function.
 }

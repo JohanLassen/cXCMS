@@ -2,7 +2,7 @@
 % Please edit documentation in R/parallel_peak_filling.R
 \name{cFillChromPeaksStep2}
 \alias{cFillChromPeaksStep2}
-\title{Intensive peak extraction step performed file-wise (parallel in cluster workflows)}
+\title{Intensive peak extraction step performed sample-wise}
 \usage{
 cFillChromPeaksStep2(input, output, index)
 }
@@ -17,5 +17,5 @@ cFillChromPeaksStep2(input, output, index)
 a res object for the final peak integration.
 }
 \description{
-Intensive peak extraction step performed file-wise (parallel in cluster workflows)
+This function is the second step in the peak filling process. It is performed file-wise and in parallel.
 }
