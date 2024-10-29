@@ -1,10 +1,10 @@
-pandoc: 3.1.1
+pandoc: 3.1.11
 pkgdown: 2.0.9
 pkgdown_sha: ~
 articles:
   HPC_workflow: HPC_workflow.html
   Tutorial: Tutorial.html
-last_built: 2024-04-24T20:25Z
+last_built: 2024-10-29T09:41Z
 urls:
   reference: https://johanlassen.github.io/cXCMS/reference
   article: https://johanlassen.github.io/cXCMS/articles

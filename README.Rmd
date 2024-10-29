@@ -2,8 +2,6 @@
 output: github_document
 ---
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -15,19 +13,21 @@ knitr::opts_chunk$set(
 
 # cXCMS
 
-<!-- badges: start -->
-<!-- badges: end -->
-
 The goal of cXCMS is to provide the framework for efficient high performance computing (HPC) untargeted LCMS data pre-processing. Also, the package memory optimizes the workflow in laptops environments (MacOS or Windows), allowing preprocessing of larger sample sizes on small PCs. The source code has been used for the project [Large-Scale metabolomics: Predicting biological age using 10,133 routine untargeted LC-MS measurements](\https://doi.org/10.1111/acel.13813).
 
 Important notes about the package:
-0. The preprocessing only works on MS1 data. If MS2 data are needed use regular xcms.
-1. cXCMS reduces memory(ram) by processing files in parallel and/or sequentially.
-2. Already peak called files do not have to be recalled, if new data are added.
-3. The CPU time is actually (slightly) worse than xcms as files must be read and saved to disk.
-4. To fully exploit the parallel functionality, use computional workflows (e.g., snakemake or gwf).
-5. New peak picking softwares are continously published and we would like to refer to MZmine and OpenMS as they are faster per file (but haven't been tested on large-scale untargeted data)
 
+0.  The preprocessing only works on MS1 data. If MS2 data are needed use regular xcms on a few samples.
+
+1.  cXCMS reduces memory (RAM) by processing files in parallel and/or sequentially given ressources available.
+
+2.  Already peak called files do not have to be recomputed, if new data are added.
+
+3.  The CPU time is actually (slightly) worse than XCMS as files must be read and saved to disk. Use XCMS if everything fits into the memory.
+
+4.  To fully exploit the parallel functionality, use computional workflows (e.g., snakemake or gwf).
+
+5.  New peak picking softwares are continously published and we would like to refer to MZmine and OpenMS as they are faster per file (but haven't been tested on large-scale untargeted data)
 
 ### Installation
 
@@ -38,9 +38,11 @@ You can install the development version of cXCMS from [GitHub](https://github.co
 devtools::install_github("johanLassen/cXCMS")
 ```
 
+This should work without major errors. We also refer to the HPC workflow (see articles).
+
 ### Overview
 
-The cluster xcms package is dependent on the regular xcms package. We aim to make as few changes as possible to ease the use and maintenance of the package.
+The cXCMS package is dependent on the regular XCMS package as ee aim to make as few changes as possible to ease the use and maintenance of the package.
 
 ```{r example, warning=F, error=F, message=F}
 library(cXCMS)
@@ -48,32 +50,48 @@ library(xcms)
 library(tidyverse)
 ```
 
-Here's the idea behind the package: The workflow makes the peak picking and the peak integration parallel to (1) reduce memory consumption and (2) improve support for multi-node high performance cluster processing. The first achievement benefits all workflows by lowering memory requirements, while the second achievement allows parallelization. All of the processes are orchestrated by a simple metadata data frame that we will describe below.
+Here's the idea behind the package:
 
-##### Workflow
-![workflow](./images/workflow.png)
+The workflow makes the peak picking and the peak integration parallel to
 
+-   Reduce memory consumption
 
+-   Improve support for multi-node high performance cluster processing.
 
-# Running the workflow on 2 files
+Hence, we can reduce memory usage in all setups (local computing and HPC) and improve processing times in HPC through parallelization.
 
-## Peak Identification
+##### Figure 1 \| Workflow
 
-## 1. Defining the mzML files of our experiment (from msdata package)
+![](man/figures/workflow.png)
+
+## Running the workflow using HPC
+
+See [article](https://johanlassen.github.io/cXCMS/articles/HPC_workflow.html) about HPV workflows.
+
+## Running the workflow locally
+
+### STEP 1 - Peak Identification
+
+#### 1. Defining the mzML files of our experiment (from msdata package)
+
 ```{r}
 data_files <- dir(system.file("sciex", package = "msdata"), full.names = TRUE)
 data_files
 ```
 
 On your system, you might want something like this:
-```
+
+```         
 data_folder <- "~/path/to/experiment"
 data_files <- list.files(data_folder, recursive=TRUE, full.names=TRUE)
 ```
 
+Once we have the paths to each of the files we can continue
+
 ## 2. Setting output files
 
 note that it is strongly advised to use .rds as file suffix although all names should work
+
 ```{r}
 peak_directory <- "./tmp/peak_picked"
 dir.create(peak_directory, recursive = TRUE, showWarnings = FALSE)
@@ -133,6 +151,7 @@ msobject <- adjustRtime(msobject, pgp)
 ```
 
 ## Grouping 2
+
 ```{r}
 pdp      <- xcms::PeakDensityParam(sampleGroups = msobject@phenoData@data$group)
 msobject <- groupChromPeaks(msobject, pdp)
@@ -142,6 +161,7 @@ readr::write_rds(msobject, output_integration_ready)
 ```
 
 ## Integration
+
 This is the most memory consuming step in the analysis. Both in the original xcms and this HPC optimized version.
 
 ```{r}
@@ -151,7 +171,9 @@ prepared_data <- cXCMS::cFillChromPeaksStep1(input = output_integration_ready, f
 ```
 
 ### Extracting peaks from the spectras
+
 This is the memory intensive step. Beware that it will always rerun all files as the peaks depend on previous steps
+
 ```{r}
 # Change subdir from peak_picked to integrated for the output files (n=sample size) of cFillChromPeaksStep2 step
 integration_files <- gsub("peak_picked", "integrated", peak_files)
@@ -187,9 +209,3 @@ feature_values  <-
   pivot_wider(names_from = feature_name, values_from = value) 
 
 ```
-
-
-# # clean all intermediate files
-# unlink("tmp", recursive = TRUE)
-# ```
-

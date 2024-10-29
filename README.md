@@ -1,10 +1,5 @@
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 # cXCMS
-
-<!-- badges: start -->
-<!-- badges: end -->
 
 The goal of cXCMS is to provide the framework for efficient high
 performance computing (HPC) untargeted LCMS data pre-processing. Also,
@@ -14,16 +9,26 @@ The source code has been used for the project [Large-Scale metabolomics:
 Predicting biological age using 10,133 routine untargeted LC-MS
 measurements](\https://doi.org/10.1111/acel.13813).
 
-Important notes about the package: 0. The preprocessing only works on
-MS1 data. If MS2 data are needed use regular xcms. 1. cXCMS reduces
-memory(ram) by processing files in parallel and/or sequentially. 2.
-Already peak called files do not have to be recalled, if new data are
-added. 3. The CPU time is actually (slightly) worse than xcms as files
-must be read and saved to disk. 4. To fully exploit the parallel
-functionality, use computional workflows (e.g., snakemake or gwf). 5.
-New peak picking softwares are continously published and we would like
-to refer to MZmine and OpenMS as they are faster per file (but haven’t
-been tested on large-scale untargeted data)
+Important notes about the package:
+
+0.  The preprocessing only works on MS1 data. If MS2 data are needed use
+    regular xcms on a few samples.
+
+1.  cXCMS reduces memory (RAM) by processing files in parallel and/or
+    sequentially given ressources available.
+
+2.  Already peak called files do not have to be recomputed, if new data
+    are added.
+
+3.  The CPU time is actually (slightly) worse than XCMS as files must be
+    read and saved to disk. Use XCMS if everything fits into the memory.
+
+4.  To fully exploit the parallel functionality, use computional
+    workflows (e.g., snakemake or gwf).
+
+5.  New peak picking softwares are continously published and we would
+    like to refer to MZmine and OpenMS as they are faster per file (but
+    haven’t been tested on large-scale untargeted data)
 
 ### Installation
 
@@ -35,11 +40,14 @@ You can install the development version of cXCMS from
 devtools::install_github("johanLassen/cXCMS")
 ```
 
+This should work without major errors. We also refer to the HPC workflow
+(see articles).
+
 ### Overview
 
-The cluster xcms package is dependent on the regular xcms package. We
-aim to make as few changes as possible to ease the use and maintenance
-of the package.
+The cXCMS package is dependent on the regular XCMS package as ee aim to
+make as few changes as possible to ease the use and maintenance of the
+package.
 
 ``` r
 library(cXCMS)
@@ -47,38 +55,45 @@ library(xcms)
 library(tidyverse)
 ```
 
-Here’s the idea behind the package: The workflow makes the peak picking
-and the peak integration parallel to (1) reduce memory consumption and
-(2) improve support for multi-node high performance cluster processing.
-The first achievement benefits all workflows by lowering memory
-requirements, while the second achievement allows parallelization. All
-of the processes are orchestrated by a simple metadata data frame that
-we will describe below.
+Here’s the idea behind the package:
 
-##### Workflow
+The workflow makes the peak picking and the peak integration parallel to
 
-<figure>
-<img src="./images/workflow.png" alt="workflow" />
-<figcaption aria-hidden="true">workflow</figcaption>
-</figure>
+- Reduce memory consumption
 
-# Running the workflow on 2 files
+- Improve support for multi-node high performance cluster processing.
 
-## Peak Identification
+Hence, we can reduce memory usage in all setups (local computing and
+HPC) and improve processing times in HPC through parallelization.
 
-## 1. Defining the mzML files of our experiment (from msdata package)
+##### Figure 1 \| Workflow
+
+![](man/figures/workflow.png)
+
+## Running the workflow using HPC
+
+See
+[article](https://johanlassen.github.io/cXCMS/articles/HPC_workflow.html)
+
+## Running the workflow locally
+
+### STEP 1 - Peak Identification
+
+#### 1. Defining the mzML files of our experiment (from msdata package)
 
 ``` r
 data_files <- dir(system.file("sciex", package = "msdata"), full.names = TRUE)
 data_files
-#> [1] "/home/johan/R/x86_64-pc-linux-gnu-library/4.3/msdata/sciex/20171016_POOL_POS_1_105-134.mzML"
-#> [2] "/home/johan/R/x86_64-pc-linux-gnu-library/4.3/msdata/sciex/20171016_POOL_POS_3_105-134.mzML"
+#> [1] "C:/Users/johan/AppData/Local/R/win-library/4.3/msdata/sciex/20171016_POOL_POS_1_105-134.mzML"
+#> [2] "C:/Users/johan/AppData/Local/R/win-library/4.3/msdata/sciex/20171016_POOL_POS_3_105-134.mzML"
 ```
 
 On your system, you might want something like this:
 
     data_folder <- "~/path/to/experiment"
     data_files <- list.files(data_folder, recursive=TRUE, full.names=TRUE)
+
+Once we have the paths to each of the files we can continue
 
 ## 2. Setting output files
 
@@ -114,12 +129,6 @@ for (i in seq_along(data_files)){
   
   cXCMS::cFindChromPeaksStep1(input = input, output = output, cwp = cwp)
 }
-#> Warning in cXCMS::cFindChromPeaksStep1(input = input, output = output, cwp = cwp): No groups provided (Experimental groups). Using random group assignment
-#> Warning in .local(object, param, ...): Your data appears to be not centroided!
-#> CentWave works best on data in centroid mode.
-#> Warning in cXCMS::cFindChromPeaksStep1(input = input, output = output, cwp = cwp): No groups provided (Experimental groups). Using random group assignment
-#> Warning in .local(object, param, ...): Your data appears to be not centroided!
-#> CentWave works best on data in centroid mode.
 ```
 
 ## 4. Merging peak picked files prior to peak grouping
@@ -229,9 +238,3 @@ feature_values  <-
   pivot_longer(cols = -feature_name) |> 
   pivot_wider(names_from = feature_name, values_from = value) 
 ```
-
-# \# clean all intermediate files
-
-# unlink(“tmp”, recursive = TRUE)
-
-# \`\`\`
