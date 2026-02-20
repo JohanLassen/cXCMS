@@ -1,0 +1,131 @@
+# Tutorial
+
+`#{r, echo=FALSE, warning=FALSE, message=FALSE} library(cXCMS) library(xcms) library(msdata) library(MsExperiment) library(readr) library(dplyr) library(tidyr) library(tibble)`
+
+The functions of this package are meant for large data sets compared to
+the computer at hand. This means that all of the functions takes the
+file path as input and outputs another file, which is saved to your SSD.
+Hence, the computational demands are lifted off the RAM (on PCs) and for
+High Performance Computing parallelization becomes feasible.
+
+## Running the workflow on 2 files
+
+### Peak Identification
+
+### 1. Defining the mzML files of our experiment (from msdata package)
+
+`#{r} data_files <- dir(system.file("sciex", package = "msdata"), full.names = TRUE) data_files`
+
+On your system, you might want something like this:
+
+    data_folder <- "~/path/to/experiment"
+    data_files <- list.files(data_folder, recursive=TRUE, full.names=TRUE)
+
+### 2. Setting output files
+
+note that it is strongly advised to use .rds as file suffix although all
+names should work \`\`\`#{r} \# Set temporary directlory (deleted after
+session)
+
+tmp_dir \<- “./tmp” \#tempdir()
+
+peak_directory \<- paste0(tmp_dir, “/peak_picked”)
+dir.create(peak_directory, recursive = TRUE, showWarnings = FALSE)
+
+peak_files \<- paste0(peak_directory, gsub(“.\*/“,”/“, data_files))
+peak_files \<- gsub(”.mzML”, “.rds”, peak_files) peak_files \<-
+gsub(“-”, “\_“, peak_files)
+
+peak_files
+
+    ## 3. Running peak picking on one file at a time
+
+    ```#{r}
+
+    # Set the peak picking parameters
+    cwp <- CentWaveParam()
+
+    for (i in seq_along(data_files)){
+      input  <- data_files[i]
+      output <- peak_files[i]
+      
+      # if file exists continue
+      if (file.exists(output)) next
+      cXCMS::cFindChromPeaksStep1(input = input, output = output, cwp = cwp)
+    }
+
+### 4. Merging peak picked files prior to peak grouping
+
+This step has been highly optimized compared to previous methods,
+reducing running time from nlog(n) to n. In practice this does not
+matter for less than 1000 samples, but in the range of 5000-10000
+samples we go from days to hours in processing time. In the +10000
+sample range the old method was not viable at all. This function uses
+the exact same function as the original method but uses a workaround to
+avoid redundant checks.
+
+\`\`\`#{r}
+
+output_peak_identified \<- paste0(tmp_dir, “/peak_picked_dataset.rds”)
+cFindChromPeaksStep2(inputs = peak_files, output =
+output_peak_identified)
+
+    ## Grouping 1
+
+    ```#{r}
+
+    msobject <- readr::read_rds(output_peak_identified)
+    pdp      <- xcms::PeakDensityParam(sampleGroups = MsExperiment::sampleData(msobject)$group)
+    msobject <- xcms::groupChromPeaks(msobject, pdp)
+
+### Alignment
+
+`#{r} pgp <- xcms::PeakGroupsParam() msobject <- adjustRtime(msobject, pgp)`
+
+### Grouping 2
+
+\`\`\`#{r} pdp \<- xcms::PeakDensityParam(sampleGroups =
+MsExperiment::sampleData(msobject)\$group) msobject \<-
+xcms::groupChromPeaks(msobject, pdp)
+
+output_integration_ready \<- paste0(tmp_dir, “/integration_ready.rds”)
+readr::write_rds(msobject, output_integration_ready)
+
+    ## Integration
+    This is the most memory consuming step in the analysis. Both in the original xcms and this HPC optimized version.
+
+    ```#{r}
+    fcp           <- FillChromPeaksParam(expandMz = 0, expandRt = 0)
+    output_step1  <- paste0(tmp_dir, "/integration_package.rds")
+    prepared_data <- cXCMS::cFillChromPeaksStep1(input = output_integration_ready, fcp = fcp, output = output_step1)
+
+#### Extracting peaks from the spectras
+
+This is the memory intensive step. Beware that it will always rerun all
+files as the peaks depend on previous steps \`\`\`#{r} \# Change subdir
+from peak_picked to integrated for the output files (n=sample size) of
+cFillChromPeaksStep2 step integration_files \<- gsub(“peak_picked”,
+“integrated”, peak_files)
+
+for (i in seq_along(integration_files)){ cFillChromPeaksStep2(input =
+output_step1, output = integration_files\[i\], index = i) }
+
+    ```#{r}
+    output <- paste0(tmp_dir, "/preprocessing_output.rds")
+    cFillChromPeaksStep3(inputFromStep1 = output_step1, inputFromStep2 = integration_files, output = output)
+
+### Output of preprocessing
+
+\`\`\`#{r}
+
+ms_preprocessed \<- read_rds(output) feature_name \<-
+xcms::featureDefinitions(ms_preprocessed) \|\> as_tibble() \|\>
+mutate(feature_name = paste0(“M”, round(mzmed), “T”, round(rtmed)),
+feature_name = make.unique(feature_name)) \|\> pull(feature_name)
+
+feature_values \<- xcms::featureValues(ms_preprocessed) \|\> as_tibble()
+\|\> mutate(feature_name = feature_name) \|\> pivot_longer(cols =
+-feature_name) \|\> pivot_wider(names_from = feature_name, values_from =
+value)
+
+head(feature_values) \`\`\`
