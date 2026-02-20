@@ -4,7 +4,7 @@
 \alias{cFindChromPeaksStep1}
 \title{Single file peak identification for parallel processing and/or RAM optimization}
 \usage{
-cFindChromPeaksStep1(input, output, cwp, groups = NULL)
+cFindChromPeaksStep1(input, output, cwp, metadata = NULL, settings = NULL)
 }
 \arguments{
 \item{input}{filename of the mzML input files}
@@ -13,13 +13,13 @@ cFindChromPeaksStep1(input, output, cwp, groups = NULL)
 
 \item{cwp}{native xcms CentWaveParam() function output}
 
-\item{groups}{the group variable used in new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)). The group variable might bias the analysis and in big datasets it might beneficial setting groups = None to do random group assignment}
+\item{metadata}{sample metadata}
+
+\item{settings}{settings list from settings.yaml}
 }
 \value{
 peak picked files in the save_folder location (./tmp/peaks_identified)
 }
 \description{
-This function is a wrapper for the xcms::findChromPeaks function.
-It is designed to be used in parallel processing and/or RAM optimization and performs peak picking on single files and saves the output as rsd file.
-To concatenate the rsd outputs into a traditional XCMSnExp object use the cFindChromPeaksStep2 function.
+Single file peak identification for parallel processing and/or RAM optimization
 }

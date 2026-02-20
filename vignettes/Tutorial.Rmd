@@ -89,8 +89,8 @@ cFindChromPeaksStep2(inputs = peak_files, output = output_peak_identified)
 ```#{r}
 
 msobject <- readr::read_rds(output_peak_identified)
-pdp      <- xcms::PeakDensityParam(sampleGroups = msobject@phenoData@data$group)
-msobject <- groupChromPeaks(msobject, pdp)
+pdp      <- xcms::PeakDensityParam(sampleGroups = MsExperiment::sampleData(msobject)$group)
+msobject <- xcms::groupChromPeaks(msobject, pdp)
 
 ```
 
@@ -103,8 +103,8 @@ msobject <- adjustRtime(msobject, pgp)
 
 ## Grouping 2
 ```#{r}
-pdp      <- xcms::PeakDensityParam(sampleGroups = msobject@phenoData@data$group)
-msobject <- groupChromPeaks(msobject, pdp)
+pdp      <- xcms::PeakDensityParam(sampleGroups = MsExperiment::sampleData(msobject)$group)
+msobject <- xcms::groupChromPeaks(msobject, pdp)
 
 output_integration_ready <- paste0(tmp_dir, "/integration_ready.rds")
 readr::write_rds(msobject, output_integration_ready)

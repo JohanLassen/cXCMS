@@ -4,14 +4,18 @@
 \alias{cFillChromPeaksStep1}
 \title{Preparation for the computational intensive peak filling step}
 \usage{
-cFillChromPeaksStep1(input, output, fcp)
+cFillChromPeaksStep1(input, output, param, interval, settings)
 }
 \arguments{
-\item{input}{path to XCMSset as returned by the peak alignment step}
+\item{input}{path to XcmsExperiment as returned by the peak alignment step}
 
-\item{output}{path of the output file. This file goes into cFillChromPeaksStep2()}
+\item{output}{path(s) of the output file(s). This file goes into cFillChromPeaksStep2()}
 
-\item{fcp}{the object returned by xcms::FillChromPeaksParam()}
+\item{param}{the object returned by xcms::FillChromPeaksParam()}
+
+\item{interval}{numeric vector of length 2 with start and end sample indices}
+
+\item{settings}{settings list from settings.yaml}
 }
 \value{
 a list object with all the necessary objects for the cGetChromPeakData and cFillChromPeaks functions

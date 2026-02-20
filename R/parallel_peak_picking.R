@@ -14,95 +14,127 @@
   if (!file.exists(dir_path)){
     dir.create(dir_path, recursive=TRUE)
   }
-  return()
+  return("dir created")
 }
+
+
+
+
+.mse_combine <- function(x) {
+
+  res <- x[[1L]]
+  res@sampleData <- do.call(MsCoreUtils::rbindFill, lapply(x, MsExperiment::sampleData))
+  res@spectra <- do.call(c, lapply(x, ProtGenerics::spectra))
+  sl <- lapply(x, function(z) z@sampleDataLinks[["spectra"]])
+  nsamp <- lengths(x)
+  nsamp <- c(0, cumsum(nsamp)[-length(nsamp)])
+  nspec <- vapply(sl, nrow, NA_integer_)
+  nspec <- c(0, cumsum(nspec)[-length(nspec)])
+  res@sampleDataLinks[["spectra"]] <- do.call(
+    rbind, mapply(function(z, i, j) {
+      z[, 1L] <- z[, 1L] + i
+      z[, 2L] <- z[, 2L] + j
+      z
+    }, sl, nsamp, nspec, SIMPLIFY = FALSE, USE.NAMES = FALSE))
+  res
+}
+
+
+.xmse_combine <-
+  function(x) {
+    res <- .mse_combine(x)
+    nsamp <- lengths(x)
+    nsamp <- c(0, cumsum(nsamp)[-length(nsamp)])
+    res@chromPeaks <- do.call(MsCoreUtils::rbindFill, mapply(function(z, i) {
+      z <- xcms::chromPeaks(z)
+      z[, "sample"] <- z[, "sample"] + i
+      z
+    }, x, nsamp, SIMPLIFY = FALSE, USE.NAMES = FALSE))
+    rownames(res@chromPeaks) <- xcms:::.featureIDs(nrow(res@chromPeaks), "CP")
+    res@chromPeakData <- do.call(
+      MsCoreUtils::rbindFill,
+      lapply(x, xcms::chromPeakData, return.type = "data.frame"))
+    rownames(res@chromPeakData) <- rownames(res@chromPeaks)
+    res@processHistory <- do.call(c, lapply(x, xcms::processHistory))
+    res
+  }
 
 
 #' Single file peak identification for parallel processing and/or RAM optimization
 #'
-#' @description
-#' This function is a wrapper for the xcms::findChromPeaks function.
-#' It is designed to be used in parallel processing and/or RAM optimization and performs peak picking on single files and saves the output as rsd file.
-#' To concatenate the rsd outputs into a traditional XCMSnExp object use the cFindChromPeaksStep2 function.
 #' @param input filename of the mzML input files
 #' @param output output filename
 #' @param cwp native xcms CentWaveParam() function output
-#' @param groups the group variable used in new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)). The group variable might bias the analysis and in big datasets it might beneficial setting groups = None to do random group assignment
-#' @importFrom xcms findChromPeaks
-#' @importFrom MSnbase readMSData
+#' @param metadata sample metadata
+#' @param settings settings list from settings.yaml
+#' @importFrom xcms findChromPeaks MergeNeighboringPeaksParam refineChromPeaks filterRt
+#' @importFrom MsExperiment readMsExperiment sampleData
+#' @importFrom Spectra MsBackendMzR
+#' @importFrom ProtGenerics filterSpectra spectra
+#' @importFrom MsCoreUtils rbindFill
 #' @importFrom readr write_rds
+#' @importFrom tibble tibble
 #' @return peak picked files in the save_folder location (./tmp/peaks_identified)
 #' @export
-cFindChromPeaksStep1 <- function(input, output, cwp, groups = NULL){
+cFindChromPeaksStep1 <- function(input, output, cwp, metadata = NULL, settings = NULL){
 
   if (typeof(input)!="character"){stop("Input must be a string\n")}
   if (!grepl("mzML|mzXML", input)){stop("Input must be a mzML or mzXML file\n")}
-  if (is.null(groups)){
+  if (is.null(metadata)){
     warning("No groups provided (Experimental groups). Using random group assignment\n")
-    groups = sample(paste0("group", 1:2), 1)}
+    metadata <- tibble(
+      sample_name = gsub("[.]mzML", "", basename(input)),
+      group = sample(paste0("group", 1:2), 1)
+    )}
+  if (is.null(metadata$sample_group)){
+    warning("No groups provided (Experimental groups). Using random group assignment\n")
+    metadata$groups = sample(paste0("group", 1:2), 1)
+  }
 
-  sample_name <- gsub("[.].*|.*[/]", "", input)
-  # Return if output file already has been preprocessed
-  if (file.exists(output)) return()
+  # Get RT filter from settings or use defaults
+  rt_min <- if (!is.null(settings$general$rt_filter_min)) settings$general$rt_filter_min else 30
 
-  # Make the XCMSnExp object
-  loaded_file <-
-    MSnbase::readMSData(
-      files = input,
-      pdata = new("NAnnotatedDataFrame", data.frame("sample_name"=sample_name, "group"=groups)),
-      mode = "onDisk",
-      msLevel. = 1L
+rt_max <- if (!is.null(settings$general$rt_filter_max)) settings$general$rt_filter_max else 600
+
+  object <-
+    MsExperiment::readMsExperiment(
+      spectraFiles = input,
+      backend = Spectra::MsBackendMzR(),
+      sampleData = metadata
     )
+  object <- ProtGenerics::filterSpectra(object, filterRt, rt = c(rt_min, rt_max))
 
-  # Call peaks
-  peaks_file  <- xcms::findChromPeaks(loaded_file, cwp)
-  # Save result
-  write_rds(peaks_file, output)
+  object  <- xcms::findChromPeaks(object, cwp, msLevel = 1L)
+
+  mnpp  <- MergeNeighboringPeaksParam(expandRt = 5)
+  object <- refineChromPeaks(object, param = mnpp, chunkSize = 1)
+
+  readr::write_rds(object, output)
 }
 
 
 
 #' Fast concatenation of XCMS peak picked files
-#' @description
-#' This function concatenates the files by building a string followed by concatenation.
-#' By doing it this way we reduce running time from n^2 to n allowing us to concatenate several thousand files in minutes rather than days.
 #'
-#' @param inputs the peak picked files (>1 file names)
-#' @param output the msnbase element of peak picked files (file name)
+#' @param inputs the peak picked files
+#' @param output the msnbase element of peak picked files
 #' @import xcms
-#' @importFrom readr read_rds
-#' @importFrom readr write_rds
-#' @return an XCMSset ready for peak grouping and alignment
+#' @importFrom readr read_rds write_rds
+#' @importFrom purrr map
+#' @return an XcmsExperiment ready for peak grouping and alignment
 #' @export
 cFindChromPeaksStep2 <- function(inputs, output){
   ## This function concatenates the files by building a string followed by concatenation.
   ## By doing it this way we reduce running time from n^2 to n allowing us to concatenate several thousand files in minutes rather than days.
 
   if (length(inputs)<2){
-    stop("Less than two files in the inputs. Please use *all* peak called files as a vector in the inputs parameter")}
-
-  # First element of string
-  concatenate_string <- "c("
-  for (i in 1:length(inputs)){
-
-    # arbitrary name for the concatenated list
-    name <- paste0("peak", i)
-    file <- inputs[i]
-    peaks_file <- readr::read_rds(file) # loads XCMSnExp object w. identified peaks
-    assign(name, peaks_file)
-
-    # Prepare for another file...
-    if (i<length(inputs)){concatenate_string <- paste0(c(concatenate_string, name, ","), collapse = "")}
-    # Or end the concatenation function c()
-    if (i==length(inputs)){concatenate_string <- paste0(c(concatenate_string,  name, ")"), collapse = "")}
+    stop("Less than two files in the inputs. Please use *all* peak called files as a vector in the inputs parameter")
   }
 
-  # Evaluate string
-  object <- eval(parse(text = concatenate_string))
+  object <- inputs |> purrr::map(~readr::read_rds(.x), .progress=TRUE) |> .xmse_combine()
   readr::write_rds(object, output)
+  return(object)
 }
-
-
 
 
 

@@ -2,20 +2,18 @@
 % Please edit documentation in R/parallel_peak_filling.R
 \name{cFillChromPeaksStep2}
 \alias{cFillChromPeaksStep2}
-\title{Intensive peak extraction step performed sample-wise}
+\title{Intensive peak extraction step performed file-wise (parallel in cluster workflows)}
 \usage{
-cFillChromPeaksStep2(input, output, index)
+cFillChromPeaksStep2(input, output)
 }
 \arguments{
-\item{input}{the file index in sample_info}
+\item{input}{path to the prepared data file from cFillChromPeaksStep1}
 
-\item{output}{the tmp directory for storage of extracted peaks}
-
-\item{index}{the index of the sample in the sample list (i.e., first file=1, second file=2...)}
+\item{output}{the output file path for storage of extracted peaks}
 }
 \value{
-a res object for the final peak integration.
+NULL (writes output to file)
 }
 \description{
-This function is the second step in the peak filling process. It is performed file-wise and in parallel.
+Intensive peak extraction step performed file-wise (parallel in cluster workflows)
 }

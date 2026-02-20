@@ -4,7 +4,7 @@
 \alias{cFillChromPeaksStep3}
 \title{fill chrom peak function 3}
 \usage{
-cFillChromPeaksStep3(inputFromStep1, inputFromStep2, output)
+cFillChromPeaksStep3(inputFromStep1, inputFromStep2, output, param, settings)
 }
 \arguments{
 \item{inputFromStep1}{Output of cFillChromPeaksStep1() function}
@@ -12,11 +12,14 @@ cFillChromPeaksStep3(inputFromStep1, inputFromStep2, output)
 \item{inputFromStep2}{Output of cFillChromPeaksStep2() function}
 
 \item{output}{the output which contains the result of the preprocessing}
+
+\item{param}{FillChromPeaksParam object}
+
+\item{settings}{settings list from settings.yaml}
 }
 \value{
 a preprocessed xcms object
 }
 \description{
-This function is the third step in the peak filling process.
-It collects the files and generates the final integrated output (intragation of missing values)
+fill chrom peak function 3
 }

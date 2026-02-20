@@ -12,25 +12,29 @@ Description:
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Suggests: 
+Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
     tidyr,
-    dplyr,
     msdata,
-    MsExperiment,
-    tibble,
     pkgdown
 VignetteBuilder: knitr
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 biocViews: 
-Imports: 
+Imports:
     xcms,
     readr,
-    stats,
-    utils,
+    methods,
     MSnbase,
-    S4Vectors
+    S4Vectors,
+    MsExperiment,
+    MsCoreUtils,
+    Spectra,
+    ProtGenerics,
+    purrr,
+    progressr,
+    dplyr,
+    tibble
 Config/testthat/edition: 3
 URL: https://johanlassen.github.io/cXCMS/
